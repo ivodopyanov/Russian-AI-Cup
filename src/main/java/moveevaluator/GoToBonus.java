@@ -12,7 +12,7 @@ import java.util.List;
 import model.*;
 import trooperstrategy.MoveEvaluation;
 
-public class GoToBonusMoveEvaluatorImpl extends MoveEvaluatorImpl
+public class GoToBonus extends MoveEvaluatorImpl
 {
     private static class BonusComparatorByImportance implements Comparator<Bonus>
     {
@@ -49,13 +49,17 @@ public class GoToBonusMoveEvaluatorImpl extends MoveEvaluatorImpl
 
     }
 
-    public static final GoToBonusMoveEvaluatorImpl INSTANCE = new GoToBonusMoveEvaluatorImpl();
+    public static final GoToBonus INSTANCE = new GoToBonus();
 
     private static BonusComparatorByImportance BONUS_COMPARATOR = new BonusComparatorByImportance();
 
     @Override
     public void evaluate(Trooper self, World world, Game game)
     {
+        if (Helper.INSTANCE.getMoveCost(self, game) > self.getActionPoints())
+        {
+            return;
+        }
         List<Bonus> pickableBonuses = new LinkedList<Bonus>();
         for (Bonus bonus : world.getBonuses())
         {
@@ -77,10 +81,12 @@ public class GoToBonusMoveEvaluatorImpl extends MoveEvaluatorImpl
         for (int i = 0; i < pickableBonuses.size(); i++)
         {
             Bonus bestBonus = pickableBonuses.get(i);
-
-            MoveEvaluation moveEvaluation = MoveEvaluation.move(Helper.INSTANCE.getDirectionForPath(self.getX(),
-                    self.getY(), bestBonus.getX(), bestBonus.getY()));
-            MoveEvaluations.INSTANCE.addMoveEvaluation(moveEvaluation, WeightFunctions.bonusWeightFunction(i));
+            for (Direction direction : Helper.INSTANCE.getDirectionForPath(self.getX(), self.getY(), bestBonus.getX(),
+                    bestBonus.getY()))
+            {
+                MoveEvaluation moveEvaluation = MoveEvaluation.move(direction);
+                MoveEvaluations.INSTANCE.addMoveEvaluation(moveEvaluation, WeightFunctions.bonusWeightFunction(i));
+            }
         }
     }
 }

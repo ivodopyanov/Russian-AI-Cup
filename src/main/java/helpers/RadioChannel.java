@@ -25,6 +25,11 @@ public class RadioChannel
 
     private Cell longTermPlan;
 
+    public void enemyGone(Cell cell)
+    {
+        spottedEnemies.remove(cell);
+    }
+
     public void enemySpotted(Cell cell)
     {
         spottedEnemies.put(cell, 0);

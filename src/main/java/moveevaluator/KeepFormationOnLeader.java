@@ -7,6 +7,7 @@ import helpers.Cell;
 import helpers.Constants;
 import helpers.FormationCalculator;
 import helpers.Helper;
+import model.Direction;
 import model.Game;
 import model.Trooper;
 import model.World;
@@ -24,14 +25,21 @@ public class KeepFormationOnLeader extends MoveEvaluatorImpl
     @Override
     public void evaluate(Trooper self, World world, Game game)
     {
+        if (Helper.INSTANCE.getMoveCost(self, game) > self.getActionPoints())
+        {
+            return;
+        }
         Trooper leader = Helper.INSTANCE.findSquadLeader(world);
         if (self.getId() == leader.getId())
         {
             return;
         }
         Cell targetCell = FormationCalculator.INSTANCE.findTrooperPosition(self, leader, world);
-        MoveEvaluation moveEvaluation = MoveEvaluation.move(Helper.INSTANCE.getDirectionForPath(self.getX(),
-                self.getY(), targetCell.getX(), targetCell.getY()));
-        MoveEvaluations.INSTANCE.addMoveEvaluation(moveEvaluation, Constants.KEEP_FORMATION_MOVE_EVALUATION);
+        for (Direction direction : Helper.INSTANCE.getDirectionForPath(self.getX(), self.getY(), targetCell.getX(),
+                targetCell.getY()))
+        {
+            MoveEvaluation moveEvaluation = MoveEvaluation.move(direction);
+            MoveEvaluations.INSTANCE.addMoveEvaluation(moveEvaluation, Constants.KEEP_FORMATION_MOVE_EVALUATION);
+        }
     }
 }

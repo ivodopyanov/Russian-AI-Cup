@@ -8,6 +8,7 @@ import helpers.*;
 import java.util.Collections;
 import java.util.List;
 
+import model.Direction;
 import model.Game;
 import model.Trooper;
 import model.World;
@@ -20,13 +21,17 @@ import com.google.common.collect.Lists;
  * @since 11 нояб. 2013 г.
  *
  */
-public class LeaderMoveEvaluation extends MoveEvaluatorImpl
+public class LeaderMove extends MoveEvaluatorImpl
 {
-    public static final LeaderMoveEvaluation INSTANCE = new LeaderMoveEvaluation();
+    public static final LeaderMove INSTANCE = new LeaderMove();
 
     @Override
     public void evaluate(Trooper self, World world, Game game)
     {
+        if (Helper.INSTANCE.getMoveCost(self, game) > self.getActionPoints())
+        {
+            return;
+        }
         Trooper leader = Helper.INSTANCE.findSquadLeader(world);
         if (self.getId() != leader.getId())
         {
@@ -36,10 +41,12 @@ public class LeaderMoveEvaluation extends MoveEvaluatorImpl
         {
             thinkOutLongTermMoveStrategy(self, world, game);
         }
-        MoveEvaluation moveEvaluation = MoveEvaluation
-                .move(Helper.INSTANCE.getDirectionForPath(self.getX(), self.getY(), RadioChannel.INSTANCE
-                        .getLongTermPlan().getX(), RadioChannel.INSTANCE.getLongTermPlan().getY()));
-        MoveEvaluations.INSTANCE.addMoveEvaluation(moveEvaluation, Constants.LONG_TERM_MOVE_EVALUATION);
+        for (Direction direction : Helper.INSTANCE.getDirectionForPath(self.getX(), self.getY(), RadioChannel.INSTANCE
+                .getLongTermPlan().getX(), RadioChannel.INSTANCE.getLongTermPlan().getY()))
+        {
+            MoveEvaluation moveEvaluation = MoveEvaluation.move(direction);
+            MoveEvaluations.INSTANCE.addMoveEvaluation(moveEvaluation, Constants.LONG_TERM_MOVE_EVALUATION);
+        }
     }
 
     private void thinkOutLongTermMoveStrategy(Trooper self, World world, Game game)

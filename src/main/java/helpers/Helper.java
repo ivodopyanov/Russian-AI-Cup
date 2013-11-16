@@ -4,8 +4,29 @@ import java.util.*;
 
 import model.*;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Lists;
+
 public class Helper
 {
+    public static class TrooperDistanceFilter implements Predicate<Trooper>
+    {
+        private Cell cell;
+        private int distance;
+
+        @Override
+        public boolean apply(Trooper arg0)
+        {
+            return DistanceCalculator.INSTANCE.getDistance(cell, new Cell(arg0.getX(), arg0.getY())) < distance;
+        }
+
+        public void reset(Cell cell, int distance)
+        {
+            this.cell = cell;
+            this.distance = distance;
+        }
+    }
+
     private static final Comparator<Trooper> LEADER_QUALITIES_COMPARATOR = new Comparator<Trooper>()
     {
         private final List<TrooperType> LEADER_QUALITIES = Arrays.asList(TrooperType.COMMANDER, TrooperType.SOLDIER,
@@ -18,9 +39,24 @@ public class Helper
         }
     };
 
+    public static TrooperDistanceFilter TROOPER_DISTANCE_FILTER = new TrooperDistanceFilter();
+
     public static Helper INSTANCE = new Helper();
 
     private TrooperType firstTrooperToMove;
+
+    public List<Trooper> findEnemies(World world)
+    {
+        List<Trooper> result = Lists.newArrayList();
+        for (Trooper trooper : world.getTroopers())
+        {
+            if (!trooper.isTeammate())
+            {
+                result.add(trooper);
+            }
+        }
+        return result;
+    }
 
     public Cell findPassableClosestCell(Cell cell, World world)
     {
@@ -76,6 +112,21 @@ public class Helper
         return squad.get(0);
     }
 
+    public List<Trooper> findVisibleEnemies(Trooper self, World world)
+    {
+        List<Trooper> result = Lists.newArrayList();
+        for (Trooper trooper : world.getTroopers())
+        {
+            if (!trooper.isTeammate()
+                    && world.isVisible(self.getShootingRange(), self.getX(), self.getY(), self.getStance(),
+                            trooper.getX(), trooper.getY(), trooper.getStance()))
+            {
+                result.add(trooper);
+            }
+        }
+        return result;
+    }
+
     public List<Trooper> findWoundedTeammates(World world)
     {
         List<Trooper> result = new LinkedList<Trooper>();
@@ -89,27 +140,46 @@ public class Helper
         return result;
     }
 
-    public Direction getDirectionForPath(int xfrom, int yfrom, int xto, int yto)
+    public List<Direction> getDirectionForPath(int xfrom, int yfrom, int xto, int yto)
     {
+        List<Direction> result = Lists.newArrayList();
         int distanceFromHere = DistanceCalculator.INSTANCE.getDistance(xfrom, yfrom, xto, yto);
         if (distanceFromHere == DistanceCalculator.INSTANCE.getDistance(xfrom + 1, yfrom, xto, yto) + 1)
         {
-            return Direction.EAST;
+            result.add(Direction.EAST);
         }
         if (distanceFromHere == DistanceCalculator.INSTANCE.getDistance(xfrom - 1, yfrom, xto, yto) + 1)
         {
-            return Direction.WEST;
+            result.add(Direction.WEST);
         }
         if (distanceFromHere == DistanceCalculator.INSTANCE.getDistance(xfrom, yfrom - 1, xto, yto) + 1)
         {
-            return Direction.NORTH;
+            result.add(Direction.NORTH);
         }
-        return Direction.SOUTH;
+        if (distanceFromHere == DistanceCalculator.INSTANCE.getDistance(xfrom, yfrom + 1, xto, yto) + 1)
+        {
+            result.add(Direction.SOUTH);
+        }
+        return result;
     }
 
     public TrooperType getFirstTrooperToMove()
     {
         return firstTrooperToMove;
+    }
+
+    public int getMoveCost(Trooper self, Game game)
+    {
+        switch (self.getStance())
+        {
+        case KNEELING:
+            return game.getKneelingMoveCost();
+        case STANDING:
+            return game.getStandingMoveCost();
+        case PRONE:
+            return game.getProneMoveCost();
+        }
+        throw new RuntimeException("WTF? Helper.getMoveCost");
     }
 
     public void init(Trooper trooper)
