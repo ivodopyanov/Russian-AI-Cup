@@ -14,25 +14,28 @@ import trooperstrategy.MoveEvaluation;
 /**
  * @author ivodopyanov
  * @since 16 нояб. 2013 г.
- *
+ * 
  */
 public class HealTeammate extends MoveEvaluatorImpl
 {
-    @Override
-    public void evaluate(Trooper self, World world, Game game)
-    {
-        if (game.getFieldMedicHealCost() > self.getActionPoints())
-        {
-            return;
-        }
-        for (Trooper teammate : Helper.INSTANCE.findSquad(world))
-        {
-            if (DistanceCalculator.INSTANCE.getDistance(self.getX(), self.getY(), teammate.getX(), teammate.getY()) <= 1
-                    && teammate.getHitpoints() < teammate.getMaximalHitpoints())
-            {
-                MoveEvaluations.INSTANCE.addMoveEvaluation(MoveEvaluation.heal(teammate.getX(), teammate.getY()),
-                        Constants.HEAL);
-            }
-        }
-    }
+	
+	@Override
+	public void evaluate(Trooper self, World world, Game game)
+	{
+		if (game.getFieldMedicHealCost() > self.getActionPoints())
+		{
+			return;
+		}
+		for (Trooper teammate : Helper.INSTANCE.findSquad(world))
+		{
+			if (DistanceCalculator.INSTANCE.getDistance(self.getX(),
+			        self.getY(), teammate.getX(), teammate.getY(), world) <= 1
+			        && teammate.getHitpoints() < teammate.getMaximalHitpoints())
+			{
+				MoveEvaluations.INSTANCE.addMoveEvaluation(
+				        MoveEvaluation.heal(teammate.getX(), teammate.getY()),
+				        Constants.HEAL);
+			}
+		}
+	}
 }
