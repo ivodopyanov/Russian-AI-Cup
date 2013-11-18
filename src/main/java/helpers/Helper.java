@@ -181,11 +181,11 @@ public class Helper
 		}
 		if (nextCell.getY() == yfrom + 1)
 		{
-			result.add(Direction.NORTH);
+			result.add(Direction.SOUTH);
 		}
 		if (nextCell.getY() == yfrom - 1)
 		{
-			result.add(Direction.SOUTH);
+			result.add(Direction.NORTH);
 		}
 		return result;
 	}
