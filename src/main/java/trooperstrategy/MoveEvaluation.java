@@ -103,4 +103,20 @@ public class MoveEvaluation
         this.evaluation = evaluation;
     }
 
+    @Override
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder().append("Action = ").append(action);
+        if (direction != null)
+        {
+            sb.append(", direction = ").append(direction);
+        }
+        else
+        {
+            sb.append(", direction is null");
+        }
+        sb.append(", x = ").append(x).append(", y = ").append(y);
+        return sb.toString();
+    }
+
 }

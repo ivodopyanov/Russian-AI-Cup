@@ -37,4 +37,10 @@ public class Cell
     {
         return x + y;
     }
+
+    @Override
+    public String toString()
+    {
+        return String.format("[%d, %d]", x, y);
+    }
 }
