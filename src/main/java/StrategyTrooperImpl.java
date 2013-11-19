@@ -56,6 +56,10 @@ public class StrategyTrooperImpl implements StrategyTrooper
         List<Cell> pathWithoutTroopers = DistanceCalculator.INSTANCE.getPath(myCell, goalCell, world, false);
         List<Cell> pathWithTroopers = DistanceCalculator.INSTANCE.getPath(myCell, goalCell, world, false);
         int stepsLeft = getStepsLeft(self, game);
+        if (pathWithTroopers.size() < 2)//Пути с учетом бойцов нет вообще! Тогда незачем и шевелиться
+        {
+            return null;
+        }
         Cell nextCell = pathWithTroopers.get(1);
         if (pathWithTroopers.size() > pathWithoutTroopers.size() + stepsLeft * 2)
         {

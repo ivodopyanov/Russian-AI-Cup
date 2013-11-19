@@ -24,8 +24,8 @@ public class MoveEvalHealTeammate extends MoveEvalImpl
         for (Trooper teammate : Helper.INSTANCE.findSquad(world))
         {
             if (teammate.getHitpoints() < teammate.getMaximalHitpoints()
-                    && DistanceCalculator.INSTANCE.isNeighbourCell(self.getX(), self.getY(), teammate.getX(),
-                            teammate.getY()))
+                    && (DistanceCalculator.INSTANCE.isNeighbourCell(self.getX(), self.getY(), teammate.getX(),
+                            teammate.getY()) || (self.getId() == teammate.getId())))
             {
                 MoveEvaluations.INSTANCE.addMoveEvaluation(MoveEvaluation.heal(teammate.getX(), teammate.getY()),
                         Constants.HEAL);

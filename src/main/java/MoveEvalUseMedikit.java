@@ -24,8 +24,8 @@ public class MoveEvalUseMedikit extends MoveEvalImpl
         for (Trooper teammate : Helper.INSTANCE.findSquad(world))
         {
             if (medikitIsUsedEfficiently(self, teammate, game)
-                    && DistanceCalculator.INSTANCE.isNeighbourCell(self.getX(), self.getY(), teammate.getX(),
-                            teammate.getY()))
+                    && (DistanceCalculator.INSTANCE.isNeighbourCell(self.getX(), self.getY(), teammate.getX(),
+                            teammate.getY()) || (self.getId() == teammate.getId())))
             {
                 MoveEvaluations.INSTANCE.addMoveEvaluation(MoveEvaluation.useMedikit(teammate.getX(), teammate.getY()),
                         Constants.HEAL);
