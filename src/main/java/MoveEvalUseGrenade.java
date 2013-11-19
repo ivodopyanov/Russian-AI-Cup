@@ -1,31 +1,19 @@
 /**
  * 
  */
-package moveevaluator;
 
-import helpers.Cell;
-import helpers.Helper;
-import helpers.WeightFunctions;
-
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import model.Game;
 import model.Trooper;
 import model.World;
-import trooperstrategy.MoveEvaluation;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 /**
  * @author ivodopyanov
  * @since 16 нояб. 2013 г.
  *
  */
-public class UseGrenade extends MoveEvaluatorImpl
+public class MoveEvalUseGrenade extends MoveEvalImpl
 {
     private static class GrenadeDamageEval
     {
@@ -52,7 +40,7 @@ public class UseGrenade extends MoveEvaluatorImpl
     @Override
     public void evaluate(Trooper self, World world, Game game)
     {
-        if (game.getGrenadeThrowCost() > self.getActionPoints())
+        if (game.getGrenadeThrowCost() > self.getActionPoints() || !self.isHoldingGrenade())
         {
             return;
         }
@@ -70,8 +58,8 @@ public class UseGrenade extends MoveEvaluatorImpl
 
     private List<GrenadeDamageEval> calcGrenadeDamage(Trooper self, List<Trooper> enemies, World world, Game game)
     {
-        List<GrenadeDamageEval> grenadeDamages = Lists.newArrayList();
-        Set<Cell> visitedCells = Sets.newHashSet();
+        List<GrenadeDamageEval> grenadeDamages = new ArrayList<GrenadeDamageEval>();
+        Set<Cell> visitedCells = new HashSet<Cell>();
         for (Trooper enemy : enemies)
         {
             for (int x = enemy.getX() - 1; x <= enemy.getX() + 1; x++)
@@ -90,7 +78,7 @@ public class UseGrenade extends MoveEvaluatorImpl
                     {
                         continue;
                     }
-                    Cell cell = new Cell(x, y);
+                    Cell cell = Cell.create(x, y);
                     if (visitedCells.contains(cell))
                     {
                         continue;

@@ -1,5 +1,3 @@
-package helpers;
-
 public interface Constants
 {
 
@@ -8,8 +6,8 @@ public interface Constants
     //Кол-во ХП, при котором боец считается смертельно раненым (и должен избегать перестрелки в любом случае)
     int DEADLY_WOUNDED_HP = 30;
 
-    int WORLD_WIDTH = 30;
-    int WORLD_HEIGHT = 20;
+    //Максимальное расстояние лидера от взвода
+    int MAX_TEAM_DISTANCE_FROM_LEADER = 8;
 
     //Оценка необходимости подобрать бонус
     double BONUS_MOVE_EVALUATION = 5.0;

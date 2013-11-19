@@ -1,15 +1,13 @@
 /**
  * 
  */
-package helpers;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import model.Trooper;
 import model.World;
-
-import com.google.common.collect.Maps;
 
 /**
  * @author ivodopyanov
@@ -21,7 +19,7 @@ public class RadioChannel
     public static final RadioChannel INSTANCE = new RadioChannel();
 
     //<Клетка где был замечен вражеский солдат, кол-во ходов прошедшее с того времени>
-    private final Map<Cell, Integer> spottedEnemies = Maps.newHashMap();
+    private final Map<Cell, Integer> spottedEnemies = new HashMap<Cell, Integer>();
 
     private Cell longTermPlan;
 
@@ -51,9 +49,9 @@ public class RadioChannel
         {
             int x = world.getWidth() - trooper.getX();
             int y = world.getHeight() - trooper.getY();
-            enemySpotted(new Cell(trooper.getX(), y));
-            enemySpotted(new Cell(x, trooper.getY()));
-            enemySpotted(new Cell(x, y));
+            enemySpotted(Cell.create(trooper.getX(), y));
+            enemySpotted(Cell.create(x, trooper.getY()));
+            enemySpotted(Cell.create(x, y));
         }
     }
 

@@ -1,13 +1,9 @@
 /**
  * 
  */
-package moveevaluator;
 
+import java.util.ArrayList;
 import java.util.List;
-
-import trooperstrategy.MoveEvaluation;
-
-import com.google.common.collect.Lists;
 
 /**
  * @author ivodopyanov
@@ -18,7 +14,7 @@ public class MoveEvaluations
 {
     public static final MoveEvaluations INSTANCE = new MoveEvaluations();
 
-    private final List<MoveEvaluation> moveEvaluations = Lists.newArrayList();
+    private final List<MoveEvaluation> moveEvaluations = new ArrayList<MoveEvaluation>();
 
     public void addMoveEvaluation(MoveEvaluation moveEvaluation, double value)
     {

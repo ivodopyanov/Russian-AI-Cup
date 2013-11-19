@@ -1,5 +1,3 @@
-package trooperstrategy;
-
 import java.util.Comparator;
 
 import model.ActionType;
@@ -12,7 +10,7 @@ public class MoveEvaluation
         @Override
         public int compare(MoveEvaluation arg0, MoveEvaluation arg1)
         {
-            return (int)(arg0.getEvaluation() - arg1.getEvaluation());
+            return (int)(arg1.getEvaluation() - arg0.getEvaluation());
         }
     };
 
@@ -24,6 +22,11 @@ public class MoveEvaluation
     public static MoveEvaluation move(Direction direction)
     {
         return new MoveEvaluation(ActionType.MOVE, direction, 0, 0);
+    }
+
+    public static MoveEvaluation move(int x, int y)
+    {
+        return new MoveEvaluation(ActionType.MOVE, null, x, y);
     }
 
     public static MoveEvaluation shoot(int x, int y)
@@ -115,7 +118,7 @@ public class MoveEvaluation
         {
             sb.append(", direction is null");
         }
-        sb.append(", x = ").append(x).append(", y = ").append(y);
+        sb.append(", x = ").append(x).append(", y = ").append(y).append(", eval = ").append(evaluation);
         return sb.toString();
     }
 
