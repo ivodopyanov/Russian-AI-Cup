@@ -54,7 +54,7 @@ public class StrategyTrooperImpl implements StrategyTrooper
     private Direction getMoveDirection(Cell myCell, Cell goalCell, Trooper self, World world, Game game)
     {
         List<Cell> pathWithoutTroopers = DistanceCalculator.INSTANCE.getPath(myCell, goalCell, world, false);
-        List<Cell> pathWithTroopers = DistanceCalculator.INSTANCE.getPath(myCell, goalCell, world, false);
+        List<Cell> pathWithTroopers = DistanceCalculator.INSTANCE.getPath(myCell, goalCell, world, true);
         int stepsLeft = getStepsLeft(self, game);
         if (pathWithTroopers.size() < 2)//Пути с учетом бойцов нет вообще! Тогда незачем и шевелиться
         {

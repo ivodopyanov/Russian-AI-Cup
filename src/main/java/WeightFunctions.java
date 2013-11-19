@@ -26,10 +26,13 @@ public class WeightFunctions
         {
         case GRENADE:
             modifier = 2.0;
+            break;
         case MEDIKIT:
             modifier = 1.0;
+            break;
         case FIELD_RATION:
             modifier = .75;
+            break;
         }
         return modifier * Constants.BONUS_MOVE_EVALUATION / (distance / 5 + 1);
     }

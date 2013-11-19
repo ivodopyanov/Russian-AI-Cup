@@ -47,8 +47,8 @@ public class RadioChannel
     {
         for (Trooper trooper : Helper.INSTANCE.findSquad(world))
         {
-            int x = world.getWidth() - trooper.getX();
-            int y = world.getHeight() - trooper.getY();
+            int x = world.getWidth() - 1 - trooper.getX();
+            int y = world.getHeight() - 1 - trooper.getY();
             enemySpotted(Cell.create(trooper.getX(), y));
             enemySpotted(Cell.create(x, trooper.getY()));
             enemySpotted(Cell.create(x, y));
