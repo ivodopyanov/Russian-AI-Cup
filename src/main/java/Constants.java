@@ -24,8 +24,8 @@ public interface Constants
     //Оценка необходимости лечения медиком или аптечкой
     double HEAL = 30;
     //Оценка броска гранаты
-    double THROW_GRENADE = 15.0;
+    double THROW_GRENADE = 25.0;
     //Оценка движения к месту, откуда можно эффективно бросить гранату
-    double GO_TO_THROW_GRENADE_POSITION = 50.0;
+    double GO_TO_THROW_GRENADE_POSITION = 22.0;
 
 }

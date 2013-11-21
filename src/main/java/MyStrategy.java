@@ -33,6 +33,7 @@ public final class MyStrategy implements Strategy
             checkMyHealth(self, world);
             checkEnemyHealth(world);
         }
+        updateMyPosition(self, world);
         scanSurroundings(self, world);
         updatePatrolPoints(self, world);
         TROOPER_STRATEGIES.get(self.getType()).move(self, world, game, move);
@@ -59,13 +60,6 @@ public final class MyStrategy implements Strategy
         condition.setBeingShot(imBeingShot);
         condition.setTrooper(self);
         condition.setTurn(world.getMoveIndex());
-
-        Cell currentCell = Cell.create(self.getX(), self.getY());
-        Cell prevCell = RadioChannel.INSTANCE.getTrooperPaths().get(self.getId()).peekLast();
-        if (prevCell == null || !prevCell.equals(currentCell))
-        {
-            RadioChannel.INSTANCE.getTrooperPaths().get(self.getId()).add(currentCell);
-        }
     }
 
     private void scanSurroundings(Trooper self, World world)
@@ -96,6 +90,16 @@ public final class MyStrategy implements Strategy
         }
     }
 
+    private void updateMyPosition(Trooper self, World world)
+    {
+        Cell currentCell = Cell.create(self.getX(), self.getY());
+        Cell prevCell = RadioChannel.INSTANCE.getTrooperPaths().get(self.getId()).peekLast();
+        if (prevCell == null || !prevCell.equals(currentCell))
+        {
+            RadioChannel.INSTANCE.getTrooperPaths().get(self.getId()).add(currentCell);
+        }
+    }
+
     private void updatePatrolPoints(Trooper self, World world)
     {
         List<Cell> visiblePoints = new ArrayList<Cell>();
@@ -111,7 +115,7 @@ public final class MyStrategy implements Strategy
         {
             RadioChannel.INSTANCE.getPatrolPoints().remove(visiblePoints);
             if (RadioChannel.INSTANCE.getLongTermPlan() != null
-                    && RadioChannel.INSTANCE.getPatrolPoints().equals(visiblePatrolPoint))
+                    && RadioChannel.INSTANCE.getLongTermPlan().equals(visiblePatrolPoint))
             {
                 RadioChannel.INSTANCE.setLongTermPlan(null);
             }

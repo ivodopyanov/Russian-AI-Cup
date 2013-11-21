@@ -22,13 +22,16 @@ public class MoveEvalMoveCloserToThrowGrenade extends MoveEvalImpl
         {
             return;
         }
+
         List<Trooper> enemies = Helper.INSTANCE.findEnemies(world);
+
         List<CombatCalculator.GrenadeDamageEval> grenadeDamageEvals = calcGrenadeDamage(self, enemies, world, game);
-        Collections.sort(grenadeDamageEvals, CombatCalculator.GRENADE_DAMAGE_COMPARATOR);
+
         if (grenadeDamageEvals.size() == 0)
         {
             return;
         }
+        Collections.sort(grenadeDamageEvals, CombatCalculator.GRENADE_DAMAGE_COMPARATOR_WITHOUT_RESPOND_DAMAGE);
         Cell cellWithinReach = findBestThrowCell(self, world, game, grenadeDamageEvals, 0, false);
         if (cellWithinReach != null)
         {
@@ -41,7 +44,14 @@ public class MoveEvalMoveCloserToThrowGrenade extends MoveEvalImpl
             MoveEvaluation moveEvaluation = MoveEvaluation.useFieldRation();
             MoveEvaluations.INSTANCE.addMoveEvaluation(moveEvaluation, Constants.GO_TO_THROW_GRENADE_POSITION);
         }
-        Cell cellWithin1Turn = findBestThrowCell(self, world, game, grenadeDamageEvals, 1, false);
+        List<CombatCalculator.GrenadeDamageEval> grenadeDamageEvalsForRange = CombatCalculator.INSTANCE
+                .filterGDEThreateningForLife(self, grenadeDamageEvals);
+        Collections.sort(grenadeDamageEvalsForRange, CombatCalculator.GRENADE_DAMAGE_COMPARATOR_WITH_RESPOND_DAMAGE);
+        if (grenadeDamageEvalsForRange.isEmpty())
+        {
+            return;
+        }
+        Cell cellWithin1Turn = findBestThrowCell(self, world, game, grenadeDamageEvalsForRange, 1, false);
         if (cellWithin1Turn != null)
         {
             MoveEvaluation moveEvaluation = MoveEvaluation.move(cellWithin1Turn.getX(), cellWithin1Turn.getY());
@@ -49,9 +59,23 @@ public class MoveEvalMoveCloserToThrowGrenade extends MoveEvalImpl
         }
     }
 
+    private int calcDamageFromShooting(Trooper self, List<Trooper> enemies, World world, Game game)
+    {
+        for (Trooper enemy : enemies)
+        {
+            if (world.isVisible(self.getShootingRange(), self.getX(), self.getY(), self.getStance(), enemy.getX(),
+                    enemy.getY(), enemy.getStance()))
+            {
+                return self.getDamage() * self.getActionPoints() / self.getShootCost();
+            }
+        }
+        return 0;
+    }
+
     private List<CombatCalculator.GrenadeDamageEval> calcGrenadeDamage(Trooper self, List<Trooper> enemies,
             World world, Game game)
     {
+        int damageFromShooting = calcDamageFromShooting(self, enemies, world, game);
         List<CombatCalculator.GrenadeDamageEval> grenadeDamages = new ArrayList<CombatCalculator.GrenadeDamageEval>();
         Set<Cell> visitedCells = new HashSet<Cell>();
         for (Trooper enemy : enemies)
@@ -74,8 +98,12 @@ public class MoveEvalMoveCloserToThrowGrenade extends MoveEvalImpl
                         continue;
                     }
                     visitedCells.add(cell);
-                    grenadeDamages.add(new CombatCalculator.GrenadeDamageEval(cell, CombatCalculator.INSTANCE
-                            .getGrenadeDamage(cell, enemies, game)));
+                    int damageFromGrenade = CombatCalculator.INSTANCE.getGrenadeDamage(cell, enemies, game);
+                    if (damageFromGrenade > damageFromShooting)
+                    {
+                        grenadeDamages.add(new CombatCalculator.GrenadeDamageEval(cell, damageFromGrenade,
+                                CombatCalculator.INSTANCE.getEnemyDamage(cell, enemies, world, game)));
+                    }
                 }
             }
         }

@@ -41,7 +41,6 @@ public class DistanceCalculator
     public static final DistanceCalculator INSTANCE = new DistanceCalculator();
 
     // ﾑ�ﾐｳﾑ�ｰﾐｽﾐｸﾑ�ｰﾐｼﾐｸ. ﾐ酉�ｰﾐｽﾐｸﾑ��ﾐｸﾐｼﾐｵﾑ紗�distance=999
-    private final boolean initialized = false;
     private static int NOT_PASSABLE = 999;
     private static int NOT_VISITED = 9999;
 
