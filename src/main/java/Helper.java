@@ -7,7 +7,7 @@ public class Helper
     private static final Comparator<Trooper> LEADER_QUALITIES_COMPARATOR = new Comparator<Trooper>()
     {
 
-        private final List<TrooperType> LEADER_QUALITIES = Arrays.asList(TrooperType.COMMANDER, TrooperType.SOLDIER,
+        private final List<TrooperType> LEADER_QUALITIES = Arrays.asList(TrooperType.SOLDIER, TrooperType.COMMANDER,
                 TrooperType.FIELD_MEDIC, TrooperType.SNIPER, TrooperType.SCOUT);
 
         @Override
@@ -37,6 +37,13 @@ public class Helper
             y += trooper.getY();
         }
         return Cell.create(x / group.size(), y / group.size());
+    }
+
+    public double distance(int x1, int y1, int x2, int y2)
+    {
+        double deltax = x2 - x1;
+        double deltay = y2 - y1;
+        return Math.sqrt(deltax * deltax + deltay * deltay);
     }
 
     public List<Trooper> findEnemies(World world)
@@ -126,14 +133,14 @@ public class Helper
         return squad.get(0);
     }
 
-    public List<Trooper> findVisibleEnemies(Trooper self, World world)
+    public List<Trooper> findVisibleEnemies(Trooper self, World world, double range)
     {
         List<Trooper> result = new ArrayList<Trooper>();
         for (Trooper trooper : world.getTroopers())
         {
             if (!trooper.isTeammate()
-                    && world.isVisible(self.getShootingRange(), self.getX(), self.getY(), self.getStance(),
-                            trooper.getX(), trooper.getY(), trooper.getStance()))
+                    && world.isVisible(range, self.getX(), self.getY(), self.getStance(), trooper.getX(),
+                            trooper.getY(), trooper.getStance()))
             {
                 result.add(trooper);
             }

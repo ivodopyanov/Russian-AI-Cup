@@ -25,7 +25,8 @@ public class MoveEvalHealTeammate extends MoveEvalImpl
         {
             if (teammate.getHitpoints() < teammate.getMaximalHitpoints()
                     && (DistanceCalculator.INSTANCE.isNeighbourCell(self.getX(), self.getY(), teammate.getX(),
-                            teammate.getY()) || (self.getId() == teammate.getId())))
+                            teammate.getY()) || (self.getId() == teammate.getId() && !RadioChannel.INSTANCE
+                            .getSquadCondition().get(self.getId()).isBeingShot())))
             {
                 MoveEvaluations.INSTANCE.addMoveEvaluation(MoveEvaluation.heal(teammate.getX(), teammate.getY()),
                         Constants.HEAL);

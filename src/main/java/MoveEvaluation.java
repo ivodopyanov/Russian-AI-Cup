@@ -39,6 +39,11 @@ public class MoveEvaluation
         return new MoveEvaluation(ActionType.THROW_GRENADE, null, x, y);
     }
 
+    public static MoveEvaluation useFieldRation()
+    {
+        return new MoveEvaluation(ActionType.EAT_FIELD_RATION, null, 0, 0);
+    }
+
     public static MoveEvaluation useMedikit(int x, int y)
     {
         return new MoveEvaluation(ActionType.USE_MEDIKIT, null, x, y);

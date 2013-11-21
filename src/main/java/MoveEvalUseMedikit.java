@@ -25,7 +25,8 @@ public class MoveEvalUseMedikit extends MoveEvalImpl
         {
             if (medikitIsUsedEfficiently(self, teammate, game)
                     && (DistanceCalculator.INSTANCE.isNeighbourCell(self.getX(), self.getY(), teammate.getX(),
-                            teammate.getY()) || (self.getId() == teammate.getId())))
+                            teammate.getY()) || (self.getId() == teammate.getId() && !RadioChannel.INSTANCE
+                            .getSquadCondition().get(self.getId()).isBeingShot())))
             {
                 MoveEvaluations.INSTANCE.addMoveEvaluation(MoveEvaluation.useMedikit(teammate.getX(), teammate.getY()),
                         Constants.HEAL);

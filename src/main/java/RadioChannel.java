@@ -2,9 +2,7 @@
  * 
  */
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.*;
 
 import model.Trooper;
 import model.World;
@@ -18,19 +16,36 @@ public class RadioChannel
 {
     public static final RadioChannel INSTANCE = new RadioChannel();
 
-    //<Клетка где был замечен вражеский солдат, кол-во ходов прошедшее с того времени>
-    private final Map<Cell, Integer> spottedEnemies = new HashMap<Cell, Integer>();
-
+    private final Map<Long, TrooperCondition> squadConditions = new HashMap<Long, TrooperCondition>();
+    private final Map<Long, TrooperCondition> enemyConditions = new HashMap<Long, TrooperCondition>();
+    private final Map<Long, LinkedList<Cell>> trooperPaths = new HashMap<Long, LinkedList<Cell>>();
     private Cell longTermPlan;
+    private final List<Cell> patrolPoints = new ArrayList<Cell>();
 
-    public void enemyGone(Cell cell)
+    public void enemyGone(Long enemyId)
     {
-        spottedEnemies.remove(cell);
+        enemyConditions.remove(enemyId);
     }
 
-    public void enemySpotted(Cell cell)
+    public void enemySpotted(Trooper enemy, World world)
     {
-        spottedEnemies.put(cell, 0);
+        TrooperCondition condition;
+        if (enemyConditions.containsKey(enemy.getId()))
+        {
+            condition = enemyConditions.get(enemy.getId());
+        }
+        else
+        {
+            condition = new TrooperCondition();
+            enemyConditions.put(enemy.getId(), condition);
+        }
+        condition.setTrooper(enemy);
+        condition.setTurn(world.getMoveIndex());
+    }
+
+    public Map<Long, TrooperCondition> getEnemyConditions()
+    {
+        return enemyConditions;
     }
 
     public Cell getLongTermPlan()
@@ -38,33 +53,48 @@ public class RadioChannel
         return longTermPlan;
     }
 
-    public Map<Cell, Integer> getSpottedEnemies()
+    public List<Cell> getPatrolPoints()
     {
-        return spottedEnemies;
+        return patrolPoints;
+    }
+
+    public List<Cell> getSpottedEnemyCells()
+    {
+        List<Cell> result = new ArrayList<Cell>();
+        for (TrooperCondition condition : enemyConditions.values())
+        {
+            result.add(Cell.create(condition.getTrooper().getX(), condition.getTrooper().getY()));
+        }
+        return result;
+    }
+
+    public Map<Long, TrooperCondition> getSquadCondition()
+    {
+        return squadConditions;
+    }
+
+    public Map<Long, LinkedList<Cell>> getTrooperPaths()
+    {
+        return trooperPaths;
     }
 
     public void init(World world)
     {
         for (Trooper trooper : Helper.INSTANCE.findSquad(world))
         {
-            int x = world.getWidth() - 1 - trooper.getX();
-            int y = world.getHeight() - 1 - trooper.getY();
-            enemySpotted(Cell.create(trooper.getX(), y));
-            enemySpotted(Cell.create(x, trooper.getY()));
-            enemySpotted(Cell.create(x, y));
+            TrooperCondition condition = new TrooperCondition();
+            condition.setTrooper(trooper);
+            condition.setTurn(world.getMoveIndex());
+            squadConditions.put(trooper.getId(), condition);
+
+            LinkedList<Cell> trooperPath = new LinkedList<Cell>();
+            trooperPath.add(Cell.create(trooper.getX(), trooper.getY()));
+            trooperPaths.put(trooper.getId(), trooperPath);
         }
     }
 
     public void setLongTermPlan(Cell longTermPlan)
     {
         this.longTermPlan = longTermPlan;
-    }
-
-    public void turnPassed()
-    {
-        for (Entry<Cell, Integer> entry : spottedEnemies.entrySet())
-        {
-            entry.setValue(entry.getValue() + 1);
-        }
     }
 }

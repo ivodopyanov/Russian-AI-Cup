@@ -19,8 +19,8 @@ public class FormationCalculator
     private static final Map<TrooperType, Cell> FORMATION = new HashMap<TrooperType, Cell>();
     static
     {
-        FORMATION.put(TrooperType.FIELD_MEDIC, Cell.create(0, 1));
-        FORMATION.put(TrooperType.SOLDIER, Cell.create(1, 0));
+        FORMATION.put(TrooperType.COMMANDER, Cell.create(0, 1));
+        FORMATION.put(TrooperType.FIELD_MEDIC, Cell.create(1, 0));
         FORMATION.put(TrooperType.SCOUT, Cell.create(-1, 0));
         FORMATION.put(TrooperType.SNIPER, Cell.create(0, 2));
     }

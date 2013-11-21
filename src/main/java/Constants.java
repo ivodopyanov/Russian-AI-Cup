@@ -20,9 +20,12 @@ public interface Constants
     //Оценка необходимости передвижения к укрытию
     double ESCAPE = 40.0;
     //Оценка необходимости перемещения к раненому бойцу
-    double GO_TO_WOUNDED_TEAMMATE = 25;
+    double GO_TO_WOUNDED_TEAMMATE = 25.0;
     //Оценка необходимости лечения медиком или аптечкой
     double HEAL = 30;
     //Оценка броска гранаты
     double THROW_GRENADE = 15.0;
+    //Оценка движения к месту, откуда можно эффективно бросить гранату
+    double GO_TO_THROW_GRENADE_POSITION = 50.0;
+
 }

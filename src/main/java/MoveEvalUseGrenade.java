@@ -15,27 +15,6 @@ import model.World;
  */
 public class MoveEvalUseGrenade extends MoveEvalImpl
 {
-    private static class GrenadeDamageEval
-    {
-        private final Cell cell;
-        private final int damage;
-
-        public GrenadeDamageEval(Cell cell, int damage)
-        {
-            this.cell = cell;
-            this.damage = damage;
-        }
-    }
-
-    private static final Comparator<GrenadeDamageEval> GRENADE_DAMAGE_COMPARATOR = new Comparator<GrenadeDamageEval>()
-    {
-
-        @Override
-        public int compare(GrenadeDamageEval o1, GrenadeDamageEval o2)
-        {
-            return o1.damage - o2.damage;
-        }
-    };
 
     @Override
     public void evaluate(Trooper self, World world, Game game)
@@ -44,21 +23,22 @@ public class MoveEvalUseGrenade extends MoveEvalImpl
         {
             return;
         }
-        List<Trooper> enemies = Helper.INSTANCE.findVisibleEnemies(self, world);
-        List<GrenadeDamageEval> grenadeDamageEvals = calcGrenadeDamage(self, enemies, world, game);
-        Collections.sort(grenadeDamageEvals, GRENADE_DAMAGE_COMPARATOR);
+        List<Trooper> enemies = Helper.INSTANCE.findVisibleEnemies(self, world, game.getGrenadeThrowRange());
+        List<CombatCalculator.GrenadeDamageEval> grenadeDamageEvals = calcGrenadeDamage(self, enemies, world, game);
+        Collections.sort(grenadeDamageEvals, CombatCalculator.GRENADE_DAMAGE_COMPARATOR);
         if (grenadeDamageEvals.size() == 0)
         {
             return;
         }
-        GrenadeDamageEval gde = grenadeDamageEvals.get(0);
-        MoveEvaluation moveEvaluation = MoveEvaluation.throwGrenade(gde.cell.getX(), gde.cell.getY());
-        MoveEvaluations.INSTANCE.addMoveEvaluation(moveEvaluation, WeightFunctions.throwGrenade(gde.damage));
+        CombatCalculator.GrenadeDamageEval gde = grenadeDamageEvals.get(0);
+        MoveEvaluation moveEvaluation = MoveEvaluation.throwGrenade(gde.getCell().getX(), gde.getCell().getY());
+        MoveEvaluations.INSTANCE.addMoveEvaluation(moveEvaluation, WeightFunctions.throwGrenade(gde.getDamage()));
     }
 
-    private List<GrenadeDamageEval> calcGrenadeDamage(Trooper self, List<Trooper> enemies, World world, Game game)
+    private List<CombatCalculator.GrenadeDamageEval> calcGrenadeDamage(Trooper self, List<Trooper> enemies,
+            World world, Game game)
     {
-        List<GrenadeDamageEval> grenadeDamages = new ArrayList<GrenadeDamageEval>();
+        List<CombatCalculator.GrenadeDamageEval> grenadeDamages = new ArrayList<CombatCalculator.GrenadeDamageEval>();
         Set<Cell> visitedCells = new HashSet<Cell>();
         for (Trooper enemy : enemies)
         {
@@ -74,7 +54,7 @@ public class MoveEvalUseGrenade extends MoveEvalImpl
                     {
                         continue;
                     }
-                    if (game.getGrenadeThrowRange() < distance(self.getX(), self.getY(), x, y))
+                    if (game.getGrenadeThrowRange() < Helper.INSTANCE.distance(self.getX(), self.getY(), x, y))
                     {
                         continue;
                     }
@@ -84,36 +64,11 @@ public class MoveEvalUseGrenade extends MoveEvalImpl
                         continue;
                     }
                     visitedCells.add(cell);
-                    grenadeDamages.add(new GrenadeDamageEval(cell, getGrenadeDamage(cell, enemies, game)));
+                    grenadeDamages.add(new CombatCalculator.GrenadeDamageEval(cell, CombatCalculator.INSTANCE
+                            .getGrenadeDamage(cell, enemies, game)));
                 }
             }
         }
         return grenadeDamages;
     }
-
-    private double distance(int x1, int y1, int x2, int y2)
-    {
-        double deltax = x2 - x1;
-        double deltay = y2 - y1;
-        return Math.sqrt(deltax * deltax + deltay * deltay);
-    }
-
-    private int getGrenadeDamage(Cell cell, List<Trooper> enemies, Game game)
-    {
-        int result = 0;
-        for (Trooper enemy : enemies)
-        {
-            if (enemy.getX() == cell.getX() && enemy.getY() == cell.getY())
-            {
-                result += game.getGrenadeDirectDamage();
-            }
-            if ((enemy.getY() == cell.getY() && Math.abs(enemy.getX() - cell.getX()) == 1)
-                    || (enemy.getX() == cell.getX() && Math.abs(enemy.getY() - cell.getY()) == 1))
-            {
-                result += game.getGrenadeCollateralDamage();
-            }
-        }
-        return result;
-    }
-
 }

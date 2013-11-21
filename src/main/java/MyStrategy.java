@@ -28,42 +28,93 @@ public final class MyStrategy implements Strategy
             Helper.INSTANCE.init(self);
             RadioChannel.INSTANCE.init(world);
         }
-
-        else if (Helper.INSTANCE.getFirstTrooperToMove().equals(self.getType()))
+        if (RadioChannel.INSTANCE.getSquadCondition().get(self.getId()).getTurn() != world.getMoveIndex())
         {
-            RadioChannel.INSTANCE.turnPassed();
+            checkMyHealth(self, world);
+            checkEnemyHealth(world);
         }
         scanSurroundings(self, world);
+        updatePatrolPoints(self, world);
         TROOPER_STRATEGIES.get(self.getType()).move(self, world, game, move);
+    }
+
+    private void checkEnemyHealth(World world)
+    {
+        for (Trooper trooper : Helper.INSTANCE.findEnemies(world))
+        {
+            if (!RadioChannel.INSTANCE.getEnemyConditions().containsKey(trooper.getId()))
+            {
+                continue;
+            }
+            TrooperCondition condition = RadioChannel.INSTANCE.getEnemyConditions().get(trooper.getId());
+            boolean isBeingHealed = condition.getTrooper().getHitpoints() < trooper.getHitpoints();
+            condition.setBeingHealed(isBeingHealed);
+        }
+    }
+
+    private void checkMyHealth(Trooper self, World world)
+    {
+        TrooperCondition condition = RadioChannel.INSTANCE.getSquadCondition().get(self.getId());
+        boolean imBeingShot = self.getHitpoints() < condition.getTrooper().getHitpoints();
+        condition.setBeingShot(imBeingShot);
+        condition.setTrooper(self);
+        condition.setTurn(world.getMoveIndex());
+
+        Cell currentCell = Cell.create(self.getX(), self.getY());
+        Cell prevCell = RadioChannel.INSTANCE.getTrooperPaths().get(self.getId()).peekLast();
+        if (prevCell == null || !prevCell.equals(currentCell))
+        {
+            RadioChannel.INSTANCE.getTrooperPaths().get(self.getId()).add(currentCell);
+        }
     }
 
     private void scanSurroundings(Trooper self, World world)
     {
-        Set<Cell> newEnemyCells = new HashSet<Cell>();
-        for (Trooper trooper : world.getTroopers())
+        Map<Long, Trooper> newEnemies = new HashMap<Long, Trooper>();
+        for (Trooper trooper : Helper.INSTANCE.findEnemies(world))
         {
-            if (!trooper.isTeammate())
+            newEnemies.put(trooper.getId(), trooper);
+        }
+        Set<Long> goneEnemiesId = new HashSet<Long>();
+        for (TrooperCondition oldEnemyCondition : RadioChannel.INSTANCE.getEnemyConditions().values())
+        {
+            if (world.isVisible(self.getVisionRange(), self.getX(), self.getY(), self.getStance(), oldEnemyCondition
+                    .getTrooper().getX(), oldEnemyCondition.getTrooper().getY(), oldEnemyCondition.getTrooper()
+                    .getStance())
+                    && !newEnemies.containsKey(oldEnemyCondition.getTrooper().getId()))
             {
-                newEnemyCells.add(Cell.create(trooper.getX(), trooper.getY()));
+                goneEnemiesId.add(oldEnemyCondition.getTrooper().getId());
             }
         }
-        Set<Cell> oldEnemyCells = RadioChannel.INSTANCE.getSpottedEnemies().keySet();
-        Set<Cell> emptyCells = new HashSet<Cell>();
-        for (Cell oldEnemyCell : oldEnemyCells)
+        for (Trooper newEnemy : newEnemies.values())
         {
-            if (world.isVisible(self.getVisionRange(), self.getX(), self.getY(), self.getStance(), oldEnemyCell.getX(),
-                    oldEnemyCell.getY(), TrooperStance.STANDING) && !newEnemyCells.contains(oldEnemyCell))
+            RadioChannel.INSTANCE.enemySpotted(newEnemy, world);
+        }
+        for (Long enemyGoneId : goneEnemiesId)
+        {
+            RadioChannel.INSTANCE.enemyGone(enemyGoneId);
+        }
+    }
+
+    private void updatePatrolPoints(Trooper self, World world)
+    {
+        List<Cell> visiblePoints = new ArrayList<Cell>();
+        for (Cell patrolPoint : RadioChannel.INSTANCE.getPatrolPoints())
+        {
+            if (world.isVisible(self.getVisionRange(), self.getX(), self.getY(), self.getStance(), patrolPoint.getX(),
+                    patrolPoint.getY(), TrooperStance.PRONE))
             {
-                emptyCells.add(oldEnemyCell);
+                visiblePoints.add(patrolPoint);
             }
         }
-        for (Cell newEnemyCell : newEnemyCells)
+        for (Cell visiblePatrolPoint : visiblePoints)
         {
-            RadioChannel.INSTANCE.enemySpotted(newEnemyCell);
-        }
-        for (Cell emptyCell : emptyCells)
-        {
-            RadioChannel.INSTANCE.enemyGone(emptyCell);
+            RadioChannel.INSTANCE.getPatrolPoints().remove(visiblePoints);
+            if (RadioChannel.INSTANCE.getLongTermPlan() != null
+                    && RadioChannel.INSTANCE.getPatrolPoints().equals(visiblePatrolPoint))
+            {
+                RadioChannel.INSTANCE.setLongTermPlan(null);
+            }
         }
     }
 }

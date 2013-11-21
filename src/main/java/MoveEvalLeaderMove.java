@@ -2,7 +2,6 @@
  * 
  */
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -32,7 +31,8 @@ public class MoveEvalLeaderMove extends MoveEvalImpl
         {
             return;
         }
-        if (RadioChannel.INSTANCE.getLongTermPlan() == null)
+        if (RadioChannel.INSTANCE.getLongTermPlan() == null
+                || RadioChannel.INSTANCE.getLongTermPlan().equals(Cell.create(self.getX(), self.getY())))
         {
             thinkOutLongTermMoveStrategy(self, world, game);
         }
@@ -51,9 +51,15 @@ public class MoveEvalLeaderMove extends MoveEvalImpl
 
     private void thinkOutLongTermMoveStrategy(Trooper self, World world, Game game)
     {
-        List<Cell> enemyLocations = new ArrayList<Cell>(RadioChannel.INSTANCE.getSpottedEnemies().keySet());
-        Collections.sort(enemyLocations,
-                new DistanceCalculator.DistanceCellComparator(Cell.create(self.getX(), self.getY()), world, false));
-        RadioChannel.INSTANCE.setLongTermPlan(enemyLocations.get(0));
+        List<Cell> patrolPoints = RadioChannel.INSTANCE.getPatrolPoints();
+        if (patrolPoints.isEmpty())
+        {
+            patrolPoints.add(Cell.create(self.getX(), world.getHeight() - self.getY() - 1));
+            patrolPoints.add(Cell.create(world.getWidth() - self.getX() - 1, world.getHeight() - self.getY() - 1));
+            patrolPoints.add(Cell.create(world.getWidth() - self.getX() - 1, world.getHeight() - self.getY() - 1));
+            Collections.sort(patrolPoints,
+                    new DistanceCalculator.DistanceCellComparator(Cell.create(self.getX(), self.getY()), world, false));
+        }
+        RadioChannel.INSTANCE.setLongTermPlan(patrolPoints.get(0));
     }
 }

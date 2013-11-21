@@ -36,7 +36,7 @@ public class MoveEvalShootEnemy extends MoveEvalImpl
     @Override
     public void evaluate(Trooper self, World world, Game game)
     {
-        List<Trooper> reachableEnemies = Helper.INSTANCE.findVisibleEnemies(self, world);
+        List<Trooper> reachableEnemies = Helper.INSTANCE.findVisibleEnemies(self, world, self.getShootingRange());
         if (reachableEnemies.size() == 0 || self.getActionPoints() < self.getShootCost())
         {
             return;
