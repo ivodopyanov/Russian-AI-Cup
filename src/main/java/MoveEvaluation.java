@@ -14,6 +14,11 @@ public class MoveEvaluation
         }
     };
 
+    public static MoveEvaluation endTurn()
+    {
+        return new MoveEvaluation(ActionType.END_TURN, null, 0, 0);
+    }
+
     public static MoveEvaluation heal(int x, int y)
     {
         return new MoveEvaluation(ActionType.HEAL, null, x, y);

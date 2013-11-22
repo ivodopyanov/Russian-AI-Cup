@@ -29,7 +29,10 @@ public class MoveEvalKeepFormationOnLeader extends MoveEvalImpl
             return;
         }
         Cell targetCell = FormationCalculator.INSTANCE.findTrooperPosition(self, leader, world);
-        MoveEvaluation moveEvaluation = MoveEvaluation.move(targetCell.getX(), targetCell.getY());
-        MoveEvaluations.INSTANCE.addMoveEvaluation(moveEvaluation, Constants.KEEP_FORMATION_MOVE_EVALUATION);
+        if (DistanceCalculator.INSTANCE.getDistance(targetCell, Cell.create(self.getX(), self.getY()), world, false) > Constants.MAX_TEAM_DISTANCE_FROM_LEADER)
+        {
+            MoveEvaluation moveEvaluation = MoveEvaluation.move(targetCell.getX(), targetCell.getY());
+            MoveEvaluations.INSTANCE.addMoveEvaluation(moveEvaluation, Constants.KEEP_FORMATION_MOVE_EVALUATION);
+        }
     }
 }

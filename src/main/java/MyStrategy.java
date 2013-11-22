@@ -1,24 +1,11 @@
 import java.util.*;
+import java.util.Map.Entry;
 
 import model.*;
 
 public final class MyStrategy implements Strategy
 {
-
-    private static final Map<TrooperType, StrategyTrooper> TROOPER_STRATEGIES = new HashMap<TrooperType, StrategyTrooper>();
-    static
-    {
-        TROOPER_STRATEGIES.put(TrooperType.COMMANDER,
-                new StrategyTrooperImpl(Arrays.<MoveEval> asList(Strategies.DEFAULT_MOVES)));
-        TROOPER_STRATEGIES.put(TrooperType.FIELD_MEDIC,
-                new StrategyTrooperImpl(Arrays.<MoveEval> asList(Strategies.MEDIC_MOVES)));
-        TROOPER_STRATEGIES.put(TrooperType.SCOUT,
-                new StrategyTrooperImpl(Arrays.<MoveEval> asList(Strategies.DEFAULT_MOVES)));
-        TROOPER_STRATEGIES.put(TrooperType.SNIPER,
-                new StrategyTrooperImpl(Arrays.<MoveEval> asList(Strategies.DEFAULT_MOVES)));
-        TROOPER_STRATEGIES.put(TrooperType.SOLDIER,
-                new StrategyTrooperImpl(Arrays.<MoveEval> asList(Strategies.DEFAULT_MOVES)));
-    }
+    private static final List<OrderBuilder> ORDER_BUILDERS = Arrays.asList();
 
     @Override
     public void move(Trooper self, World world, Game game, Move move)
@@ -34,9 +21,29 @@ public final class MyStrategy implements Strategy
             checkEnemyHealth(world);
         }
         updateMyPosition(self, world);
-        scanSurroundings(self, world);
+        scanSurroundingsForEnemies(self, world);
+        scanSurroundingsForBonuses(world);
         updatePatrolPoints(self, world);
-        TROOPER_STRATEGIES.get(self.getType()).move(self, world, game, move);
+        if (world.getMoveIndex() == 1)
+        {
+            //Первый ход всегда пропускаем, чтобы определить очередность движения солдат
+            RadioChannel.INSTANCE.getTurnOrder().add(self.getType());
+            return;
+        }
+        if (RadioChannel.INSTANCE.doesRequireNewOrders())
+        {
+            rethinkOrders(self, world, game);
+        }
+        OrderForTurn currentOrderForTurn = RadioChannel.INSTANCE.getOrders().get(self.getId()).peek();
+        Move nextMove = currentOrderForTurn.getOrders().poll();
+        if (currentOrderForTurn.getOrders().isEmpty())
+        {
+            RadioChannel.INSTANCE.getOrders().get(self.getId()).poll();
+        }
+        move.setAction(nextMove.getAction());
+        move.setDirection(nextMove.getDirection());
+        move.setX(nextMove.getX());
+        move.setY(nextMove.getY());
     }
 
     private void checkEnemyHealth(World world)
@@ -62,25 +69,69 @@ public final class MyStrategy implements Strategy
         condition.setTurn(world.getMoveIndex());
     }
 
-    private void scanSurroundings(Trooper self, World world)
+    private void rethinkOrders(Trooper self, World world, Game game)
     {
-        Map<Long, Trooper> newEnemies = new HashMap<Long, Trooper>();
+        RadioChannel.INSTANCE.resetOrders();
+        List<Trooper> squad = Helper.INSTANCE.findSquad(world);
+        List<Bonus> visibleBonuses = Arrays.asList(world.getBonuses());
+        List<Trooper> visibleEnemies = Helper.INSTANCE.findEnemies(world);
+        for (OrderBuilder orderBuilder : ORDER_BUILDERS)
+        {
+            if (orderBuilder.isApplicable(squad, visibleBonuses, visibleEnemies, world, game))
+            {
+                orderBuilder.buildOrder(squad, visibleBonuses, visibleEnemies, world, game);
+                break;
+            }
+        }
+        RadioChannel.INSTANCE.ordersGiven();
+    }
+
+    private void scanSurroundingsForBonuses(World world)
+    {
+        Map<Cell, BonusType> visibleBonuses = new HashMap<Cell, BonusType>();
+        for (Bonus bonus : world.getBonuses())
+        {
+            visibleBonuses.put(Cell.create(bonus.getX(), bonus.getY()), bonus.getType());
+        }
+
+        Set<Cell> goneBonuses = new HashSet<Cell>();
+        for (Cell cell : RadioChannel.INSTANCE.getBonuses().keySet())
+        {
+            if (!visibleBonuses.containsKey(cell)
+                    && Helper.INSTANCE.isVisibleForSquad(cell, world, TrooperStance.PRONE))
+            {
+                goneBonuses.add(cell);
+            }
+        }
+        for (Cell goneBonus : goneBonuses)
+        {
+            RadioChannel.INSTANCE.bonusGone(goneBonus);
+        }
+        for (Entry<Cell, BonusType> visibleBonus : visibleBonuses.entrySet())
+        {
+            RadioChannel.INSTANCE.bonusSpotted(visibleBonus.getKey(), visibleBonus.getValue());
+        }
+    }
+
+    private void scanSurroundingsForEnemies(Trooper self, World world)
+    {
+        Map<Long, Trooper> visibleEnemies = new HashMap<Long, Trooper>();
         for (Trooper trooper : Helper.INSTANCE.findEnemies(world))
         {
-            newEnemies.put(trooper.getId(), trooper);
+            visibleEnemies.put(trooper.getId(), trooper);
         }
         Set<Long> goneEnemiesId = new HashSet<Long>();
         for (TrooperCondition oldEnemyCondition : RadioChannel.INSTANCE.getEnemyConditions().values())
         {
-            if (world.isVisible(self.getVisionRange(), self.getX(), self.getY(), self.getStance(), oldEnemyCondition
-                    .getTrooper().getX(), oldEnemyCondition.getTrooper().getY(), oldEnemyCondition.getTrooper()
-                    .getStance())
-                    && !newEnemies.containsKey(oldEnemyCondition.getTrooper().getId()))
+            Cell oldTrooperCell = Cell.create(oldEnemyCondition.getTrooper().getX(), oldEnemyCondition.getTrooper()
+                    .getY());
+            if (Helper.INSTANCE.isVisibleForSquad(oldTrooperCell, world, oldEnemyCondition.getTrooper().getStance())
+                    && !visibleEnemies.containsKey(oldEnemyCondition.getTrooper().getId()))
             {
                 goneEnemiesId.add(oldEnemyCondition.getTrooper().getId());
             }
         }
-        for (Trooper newEnemy : newEnemies.values())
+        for (Trooper newEnemy : visibleEnemies.values())
         {
             RadioChannel.INSTANCE.enemySpotted(newEnemy, world);
         }

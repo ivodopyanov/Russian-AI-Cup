@@ -1,6 +1,6 @@
 
 
-public abstract class MoveEvalImpl implements MoveEval
+public abstract class MoveEvalImpl implements XMoveEval
 {
 	
 }

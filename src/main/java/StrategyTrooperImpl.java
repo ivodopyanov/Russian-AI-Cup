@@ -6,9 +6,9 @@ import model.*;
 public class StrategyTrooperImpl implements StrategyTrooper
 {
 
-    private final List<MoveEval> moveEvaluators;
+    private final List<XMoveEval> moveEvaluators;
 
-    protected StrategyTrooperImpl(List<MoveEval> moveEvaluators)
+    protected StrategyTrooperImpl(List<XMoveEval> moveEvaluators)
     {
         this.moveEvaluators = moveEvaluators;
     }
@@ -16,8 +16,9 @@ public class StrategyTrooperImpl implements StrategyTrooper
     @Override
     public void move(Trooper self, World world, Game game, Move move)
     {
+
         MoveEvaluations.INSTANCE.reset();
-        for (MoveEval moveEvaluator : moveEvaluators)
+        for (XMoveEval moveEvaluator : moveEvaluators)
         {
             moveEvaluator.evaluate(self, world, game);
         }
@@ -61,10 +62,10 @@ public class StrategyTrooperImpl implements StrategyTrooper
             return null;
         }
         Cell nextCell = pathWithTroopers.get(1);
-        if (pathWithTroopers.size() > pathWithoutTroopers.size() + stepsLeft * 2)
+        /*if (pathWithTroopers.size() > pathWithoutTroopers.size() + stepsLeft * 2)
         {
             return null;
-        }
+        }*/
         return Helper.INSTANCE.getDirectionForNeighbours(myCell, nextCell);
 
     }
@@ -86,4 +87,5 @@ public class StrategyTrooperImpl implements StrategyTrooper
         }
         return self.getActionPoints() / moveCost;
     }
+
 }

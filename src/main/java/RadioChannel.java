@@ -4,8 +4,7 @@
 
 import java.util.*;
 
-import model.Trooper;
-import model.World;
+import model.*;
 
 /**
  * @author ivodopyanov
@@ -21,9 +20,31 @@ public class RadioChannel
     private final Map<Long, LinkedList<Cell>> trooperPaths = new HashMap<Long, LinkedList<Cell>>();
     private Cell longTermPlan;
     private final List<Cell> patrolPoints = new ArrayList<Cell>();
+    private final Map<Long, LinkedList<OrderForTurn>> orders = new HashMap<Long, LinkedList<OrderForTurn>>();
+    private final Map<Cell, BonusType> bonuses = new HashMap<Cell, BonusType>();
+    private boolean requireNewOrders = true;
+    private final List<TrooperType> turnOrder = new ArrayList<TrooperType>();
+
+    public void bonusGone(Cell cell)
+    {
+        requireNewOrders = true;
+        bonuses.remove(cell);
+    }
+
+    public void bonusSpotted(Cell cell, BonusType bonusType)
+    {
+        requireNewOrders = !bonuses.containsKey(cell);
+        bonuses.put(cell, bonusType);
+    }
+
+    public boolean doesRequireNewOrders()
+    {
+        return requireNewOrders;
+    }
 
     public void enemyGone(Long enemyId)
     {
+        requireNewOrders = true;
         enemyConditions.remove(enemyId);
     }
 
@@ -39,8 +60,15 @@ public class RadioChannel
             condition = new TrooperCondition();
             enemyConditions.put(enemy.getId(), condition);
         }
+        requireNewOrders = condition.getTrooper().getX() != enemy.getX()
+                || condition.getTrooper().getY() != enemy.getY();
         condition.setTrooper(enemy);
         condition.setTurn(world.getMoveIndex());
+    }
+
+    public Map<Cell, BonusType> getBonuses()
+    {
+        return bonuses;
     }
 
     public Map<Long, TrooperCondition> getEnemyConditions()
@@ -53,9 +81,42 @@ public class RadioChannel
         return longTermPlan;
     }
 
+    public Map<Long, LinkedList<OrderForTurn>> getOrders()
+    {
+        return orders;
+    }
+
     public List<Cell> getPatrolPoints()
     {
         return patrolPoints;
+    }
+
+    public List<Cell> getPlannedSquadPosition(Trooper currentTrooper, int turnIndex, World world)
+    {
+        List<Cell> result = new ArrayList<Cell>();
+        for (Trooper trooper : Helper.INSTANCE.findSquad(world))
+        {
+            if (trooper.getId() == currentTrooper.getId())
+            {
+                continue;
+            }
+            boolean beginningOfTurn = turnOrder.indexOf(trooper.getType()) > turnOrder
+                    .indexOf(currentTrooper.getType());
+            result.add(getPlannedTrooperPosition(trooper.getId(), turnIndex, beginningOfTurn));
+        }
+        return result;
+    }
+
+    public Cell getPlannedTrooperPosition(Long trooperId, int turnIndex, boolean beginningOfTurn)
+    {
+        for (OrderForTurn orderForTurn : orders.get(trooperId))
+        {
+            if (orderForTurn.getTurnIndex() == turnIndex)
+            {
+                return beginningOfTurn ? orderForTurn.getStart() : orderForTurn.getEnd();
+            }
+        }
+        return null;
     }
 
     public List<Cell> getSpottedEnemyCells()
@@ -78,6 +139,47 @@ public class RadioChannel
         return trooperPaths;
     }
 
+    public List<TrooperType> getTurnOrder()
+    {
+        return turnOrder;
+    }
+
+    public void giveMoveOrder(Long trooperId, List<PathNode> trooperPath)
+    {
+        if (trooperPath.isEmpty())
+        {
+            return;
+        }
+        int turnIndex = trooperPath.get(0).getTurnIndex();
+        LinkedList<Move> movesForTurn = new LinkedList<Move>();
+        for (PathNode pathNode : trooperPath)
+        {
+            if (pathNode.getTurnIndex() != turnIndex)
+            {
+                Cell start = Cell.create(movesForTurn.peekFirst().getX(), movesForTurn.peekFirst().getY());
+                Cell end = Cell.create(movesForTurn.peekLast().getX(), movesForTurn.peekLast().getY());
+                OrderForTurn orderForTurn = new OrderForTurn(start, end, movesForTurn, turnIndex);
+                giveOrder(trooperId, orderForTurn);
+                turnIndex++;
+                movesForTurn.clear();
+            }
+            Move move = new Move();
+            move.setAction(ActionType.MOVE);
+            move.setX(pathNode.getCell().getX());
+            move.setY(pathNode.getCell().getY());
+            movesForTurn.add(move);
+        }
+        Cell start = Cell.create(movesForTurn.peekFirst().getX(), movesForTurn.peekFirst().getY());
+        Cell end = Cell.create(movesForTurn.peekLast().getX(), movesForTurn.peekLast().getY());
+        OrderForTurn orderForTurn = new OrderForTurn(start, end, movesForTurn, turnIndex);
+        giveOrder(trooperId, orderForTurn);
+    }
+
+    public void giveOrder(Long trooperId, OrderForTurn trooperOrder)
+    {
+        orders.get(trooperId).add(trooperOrder);
+    }
+
     public void init(World world)
     {
         for (Trooper trooper : Helper.INSTANCE.findSquad(world))
@@ -90,7 +192,35 @@ public class RadioChannel
             LinkedList<Cell> trooperPath = new LinkedList<Cell>();
             trooperPath.add(Cell.create(trooper.getX(), trooper.getY()));
             trooperPaths.put(trooper.getId(), trooperPath);
+
+            orders.put(trooper.getId(), new LinkedList<OrderForTurn>());
         }
+        for (Bonus bonus : world.getBonuses())
+        {
+            bonuses.put(Cell.create(bonus.getX(), bonus.getY()), bonus.getType());
+        }
+    }
+
+    public boolean isSomeoneBeingShot()
+    {
+        for (TrooperCondition teammateCondition : squadConditions.values())
+        {
+            if (teammateCondition.isBeingShot())
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void ordersGiven()
+    {
+        requireNewOrders = true;
+    }
+
+    public void resetOrders()
+    {
+        orders.clear();
     }
 
     public void setLongTermPlan(Cell longTermPlan)

@@ -38,15 +38,18 @@ public class MoveEvalLeaderMove extends MoveEvalImpl
         }
         List<Trooper> squad = Helper.INSTANCE.findSquad(world);
         squad.remove(self);
-        if (DistanceCalculator.INSTANCE.getDistance(Helper.INSTANCE.centerOfTrooperGroup(squad),
-                Cell.create(self.getX(), self.getY()), world, false) > Constants.MAX_TEAM_DISTANCE_FROM_LEADER)
+        Cell squadCenter = Helper.INSTANCE.centerOfTrooperGroup(squad);
+        if (DistanceCalculator.INSTANCE.getDistance(squadCenter, Cell.create(self.getX(), self.getY()), world, false) > Constants.MAX_TEAM_DISTANCE_FROM_LEADER)
         {
-            //Не двигаемся вперед, если слишком далеко от остальной группы
-            return;
+            MoveEvaluation moveEvaluation = MoveEvaluation.move(squadCenter.getX(), squadCenter.getY());
+            MoveEvaluations.INSTANCE.addMoveEvaluation(moveEvaluation, Constants.KEEP_FORMATION_MOVE_EVALUATION);
         }
-        MoveEvaluation moveEvaluation = MoveEvaluation.move(RadioChannel.INSTANCE.getLongTermPlan().getX(),
-                RadioChannel.INSTANCE.getLongTermPlan().getY());
-        MoveEvaluations.INSTANCE.addMoveEvaluation(moveEvaluation, Constants.LONG_TERM_MOVE_EVALUATION);
+        else
+        {
+            MoveEvaluation moveEvaluation = MoveEvaluation.move(RadioChannel.INSTANCE.getLongTermPlan().getX(),
+                    RadioChannel.INSTANCE.getLongTermPlan().getY());
+            MoveEvaluations.INSTANCE.addMoveEvaluation(moveEvaluation, Constants.LONG_TERM_MOVE_EVALUATION);
+        }
     }
 
     private void thinkOutLongTermMoveStrategy(Trooper self, World world, Game game)

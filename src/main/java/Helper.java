@@ -39,6 +39,13 @@ public class Helper
         return Cell.create(x / group.size(), y / group.size());
     }
 
+    public double distance(Cell cell1, Cell cell2)
+    {
+        double dx = cell1.getX() - cell2.getX();
+        double dy = cell1.getY() - cell2.getY();
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
     public double distance(int x1, int y1, int x2, int y2)
     {
         double deltax = x2 - x1;
@@ -131,6 +138,18 @@ public class Helper
         List<Trooper> squad = findSquad(world);
         Collections.sort(squad, LEADER_QUALITIES_COMPARATOR);
         return squad.get(0);
+    }
+
+    public Trooper findTeammateTrooperByType(World world, TrooperType type)
+    {
+        for (Trooper trooper : findSquad(world))
+        {
+            if (trooper.getType().equals(type))
+            {
+                return trooper;
+            }
+        }
+        return null;
     }
 
     public List<Trooper> findVisibleEnemies(Trooper self, World world, double range)
@@ -228,5 +247,18 @@ public class Helper
     public boolean isInitialized()
     {
         return initialized;
+    }
+
+    public boolean isVisibleForSquad(Cell cell, World world, TrooperStance cellStance)
+    {
+        for (Trooper teammate : findSquad(world))
+        {
+            if (world.isVisible(teammate.getVisionRange(), teammate.getX(), teammate.getY(), teammate.getStance(),
+                    cell.getX(), cell.getY(), cellStance))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

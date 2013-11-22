@@ -2,11 +2,12 @@
  * 
  */
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.TreeSet;
 
-import model.CellType;
-import model.Trooper;
-import model.World;
+import model.*;
 
 /**
  * @author ivodopyanov
@@ -15,70 +16,78 @@ import model.World;
  */
 public class DistanceCalculator
 {
-
     public static class DistanceCellComparator implements Comparator<Cell>
     {
 
         private final Cell pivot;
         private final World world;
-        private final boolean withTroopers;
+        private final Trooper trooper;
+        private final Game game;
+        private final int startAP;
 
-        public DistanceCellComparator(Cell pivot, World world, boolean withTroopers)
+        public DistanceCellComparator(Trooper trooper, int startAP, Cell pivot, World world, Game game)
         {
             this.pivot = pivot;
             this.world = world;
-            this.withTroopers = withTroopers;
+            this.trooper = trooper;
+            this.game = game;
+            this.startAP = startAP;
         }
 
         @Override
         public int compare(Cell o1, Cell o2)
         {
-            return INSTANCE.getDistance(pivot, o1, world, withTroopers)
-                    - INSTANCE.getDistance(pivot, o2, world, withTroopers);
+            return INSTANCE.getDistance(trooper, startAP, pivot, o1, world, game)
+                    - INSTANCE.getDistance(trooper, startAP, pivot, o2, world, game);
         }
     }
+
+    public static final Comparator<PathNode> PATH_NODE_COMPARATOR = new Comparator<PathNode>()
+    {
+        @Override
+        public int compare(PathNode o1, PathNode o2)
+        {
+            return o1.getSpentAP() - o2.getSpentAP();
+        }
+    };
 
     public static final DistanceCalculator INSTANCE = new DistanceCalculator();
 
-    // ﾑ�ﾐｳﾑ�ｰﾐｽﾐｸﾑ�ｰﾐｼﾐｸ. ﾐ酉�ｰﾐｽﾐｸﾑ��ﾐｸﾐｼﾐｵﾑ紗�distance=999
-    private static int NOT_PASSABLE = 999;
-    private static int NOT_VISITED = 9999;
-
-    public int getDistance(Cell start, Cell end, World world, boolean withTroopers)
+    public int getDistance(Trooper trooper, int startAP, Cell start, Cell end, World world, Game game)
     {
-        int[][] distanceToCells = new int[world.getWidth() + 2][world.getHeight() + 2];
-        for (int x = 0; x < world.getWidth(); x++)
-        {
-            for (int y = 0; y < world.getHeight(); y++)
-            {
-                distanceToCells[x][y] = NOT_VISITED;
-            }
-        }
-        LinkedList<Cell> nextCells = new LinkedList<Cell>();
-        nextCells.add(start);
-        calcDistanceRecurs(start, end, nextCells, distanceToCells, world, 0, withTroopers);
-        return distanceToCells[end.getX()][end.getY()];
+        PathNode startNode = new PathNode(start, world.getMoveIndex(), null, trooper.getActionPoints(), 0);
+        TreeSet<PathNode> allNodes = new TreeSet<PathNode>(PATH_NODE_COMPARATOR);
+        PathNode endingNode = calcDistanceRecurs2(trooper, start, end, startNode, allNodes, world, game);
+        return endingNode.getSpentAP();
     }
 
-    public int getDistance(int x1, int y1, int x2, int y2, World world, boolean withTroopers)
+    public List<PathNode> getPath(Trooper trooper, int startAP, int turnIndex, Cell start, Cell end, World world,
+            Game game)
     {
-        return getDistance(Cell.create(x1, y2), Cell.create(x2, y2), world, withTroopers);
+        PathNode startNode = new PathNode(start, turnIndex, null, trooper.getActionPoints(), 0);
+        TreeSet<PathNode> allNodes = new TreeSet<PathNode>(PATH_NODE_COMPARATOR);
+        PathNode endingNode = calcDistanceRecurs2(trooper, start, end, startNode, allNodes, world, game);
+        LinkedList<PathNode> result = new LinkedList<PathNode>();
+        while (endingNode != null)
+        {
+            result.push(endingNode);
+            endingNode = endingNode.getPrevPathNode();
+        }
+        return result;
     }
 
-    public List<Cell> getPath(Cell start, Cell end, World world, boolean withTroopers)
+    public boolean isCommanderNearby(Cell cell, Trooper trooper, int turnIndex, World world)
     {
-        int[][] distanceToCells = new int[world.getWidth() + 2][world.getHeight() + 2];
-        for (int x = 0; x < world.getWidth(); x++)
+        Trooper commander = Helper.INSTANCE.findTeammateTrooperByType(world, TrooperType.COMMANDER);
+        if (commander == null)
         {
-            for (int y = 0; y < world.getHeight(); y++)
-            {
-                distanceToCells[x][y] = NOT_VISITED;
-            }
+            return false;//Командира с нами больше нет!
         }
-        LinkedList<Cell> nextCells = new LinkedList<Cell>();
-        nextCells.add(start);
-        calcDistanceRecurs(start, end, nextCells, distanceToCells, world, 0, withTroopers);
-        return findPathsFromDistanceTable(start, end, distanceToCells, world);
+        boolean beginningOfTurn = RadioChannel.INSTANCE.getTurnOrder().indexOf(TrooperType.COMMANDER) > RadioChannel.INSTANCE
+                .getTurnOrder().indexOf(trooper.getType());
+        Cell commanderPosition = RadioChannel.INSTANCE.getPlannedTrooperPosition(commander.getId(), turnIndex,
+                beginningOfTurn);
+        return this.isNeighbourCell(cell.getX(), cell.getY(), commanderPosition.getX(), commanderPosition.getY());
     }
 
     public boolean isNeighbourCell(int x1, int y1, int x2, int y2)
@@ -88,97 +97,74 @@ public class DistanceCalculator
         return (dx == 1 && dy == 0) || (dx == 0 && dy == 1);
     }
 
-    private void calcDistanceRecurs(Cell start, Cell end, LinkedList<Cell> cellsToVisit, int[][] distanceToCells,
-            World world, int distance, boolean withTroopers)
+    private PathNode calcDistanceRecurs2(Trooper trooper, Cell start, Cell end, PathNode currentNode,
+            TreeSet<PathNode> allNodes, World world, Game game)
     {
+        if (currentNode == null)
+        {
+            return null;//Путь недостижим в принципе
+        }
+        if (currentNode.getCell().equals(end))
+        {
+            return currentNode;
+        }
+        boolean nextTurn = currentNode.getCurrentAP() < game.getStandingMoveCost();
+        int turnIndex = currentNode.getTurnIndex();
+        int currentAP = currentNode.getCurrentAP();
+        if (nextTurn)
+        {
+            turnIndex++;
+            currentAP = trooper.getInitialActionPoints();
+            if (isCommanderNearby(currentNode.getCell(), trooper, turnIndex, world))
+            {
+                currentAP += game.getCommanderAuraBonusActionPoints();
+            }
+        }
+
         LinkedList<Cell> nextCells = new LinkedList<Cell>();
-        for (Cell cell : cellsToVisit)
+        if (currentNode.getCell().getX() != world.getWidth() - 1)
         {
-            if (!isPassable(cell, world, withTroopers) && !cell.equals(start) && !cell.equals(end))
+            nextCells.add(Cell.create(currentNode.getCell().getX() + 1, currentNode.getCell().getY()));
+        }
+        if (currentNode.getCell().getX() != 0)
+        {
+            nextCells.add(Cell.create(currentNode.getCell().getX() - 1, currentNode.getCell().getY()));
+        }
+        if (currentNode.getCell().getY() != world.getHeight() - 1)
+        {
+            nextCells.add(Cell.create(currentNode.getCell().getX(), currentNode.getCell().getY() + 1));
+        }
+        if (currentNode.getCell().getY() != 0)
+        {
+            nextCells.add(Cell.create(currentNode.getCell().getX(), currentNode.getCell().getY() - 1));
+        }
+        nextCells.add(currentNode.getCell());
+        for (Cell cell : nextCells)
+        {
+            if (!isPassable(cell, world, trooper, turnIndex) && !cell.equals(start) && !cell.equals(end))
             {
-                distanceToCells[cell.getX()][cell.getY()] = NOT_PASSABLE;
                 continue;
             }
-            if (distanceToCells[cell.getX()][cell.getY()] != NOT_VISITED)
-            {
-                continue;
-            }
-            distanceToCells[cell.getX()][cell.getY()] = distance;
-            if (end.equals(cell))
-            {
-                return;
-            }
-            if (cell.getX() != world.getWidth() - 1)
-            {
-                nextCells.add(Cell.create(cell.getX() + 1, cell.getY()));
-            }
-            if (cell.getX() != 0)
-            {
-                nextCells.add(Cell.create(cell.getX() - 1, cell.getY()));
-            }
-            if (cell.getY() != world.getHeight() - 1)
-            {
-                nextCells.add(Cell.create(cell.getX(), cell.getY() + 1));
-            }
-            if (cell.getY() != 0)
-            {
-                nextCells.add(Cell.create(cell.getX(), cell.getY() - 1));
-            }
+            PathNode nextNode = new PathNode(cell, turnIndex, currentNode, currentAP - game.getStandingMoveCost(),
+                    currentNode.getSpentAP() + game.getStandingMoveCost());
+            allNodes.add(nextNode);
         }
-        if (!nextCells.isEmpty())
-        {
-            calcDistanceRecurs(start, end, nextCells, distanceToCells, world, distance + 1, withTroopers);
-        }
+        return calcDistanceRecurs2(trooper, start, end, allNodes.pollFirst(), allNodes, world, game);
     }
 
-    private Cell findNextCellForPath(Cell current, int[][] distanceToCells, World world)
+    private boolean isPassable(Cell cell, World world, Trooper self, int turnIndex)
     {
-        Integer distanceToCurrent = distanceToCells[current.getX()][current.getY()];
-        if (current.getX() != 0 && distanceToCells[current.getX() - 1][current.getY()] == distanceToCurrent - 1)
+        if (CellType.FREE.equals(world.getCells()[cell.getX()][cell.getY()]))
         {
-            return Cell.create(current.getX() - 1, current.getY());
+            return false;
         }
-        if (current.getX() != world.getWidth() - 1
-                && distanceToCells[current.getX() + 1][current.getY()] == distanceToCurrent - 1)
+        for (Cell plannedTrooperPosition : RadioChannel.INSTANCE.getPlannedSquadPosition(self, turnIndex, world))
         {
-            return Cell.create(current.getX() + 1, current.getY());
-        }
-        if (current.getY() != 0 && distanceToCells[current.getX()][current.getY() - 1] == distanceToCurrent - 1)
-        {
-            return Cell.create(current.getX(), current.getY() - 1);
-        }
-        if (current.getY() != world.getHeight() - 1
-                && distanceToCells[current.getX()][current.getY() + 1] == distanceToCurrent - 1)
-        {
-            return Cell.create(current.getX(), current.getY() + 1);
-        }
-        return null;
-    }
-
-    private List<Cell> findPathsFromDistanceTable(Cell start, Cell end, int[][] distanceToCells, World world)
-    {
-        List<Cell> path = new ArrayList<Cell>();
-        for (Cell nextCell = end; nextCell != null; nextCell = findNextCellForPath(nextCell, distanceToCells, world))
-        {
-            path.add(nextCell);
-        }
-        Collections.reverse(path);
-        return path;
-
-    }
-
-    private boolean isPassable(Cell cell, World world, boolean withTroopers)
-    {
-        if (withTroopers)
-        {
-            for (Trooper trooper : world.getTroopers())
+            if (plannedTrooperPosition.equals(cell))
             {
-                if (trooper.getX() == cell.getX() && trooper.getY() == cell.getY())
-                {
-                    return false;
-                }
+                return false;
             }
         }
-        return CellType.FREE.equals(world.getCells()[cell.getX()][cell.getY()]);
+        return true;
     }
 }
