@@ -63,30 +63,29 @@ public class OrderBuilderPatrolArea extends OrderBuilderImpl
         for (Trooper trooper : troopers)
         {
             Cell trooperCell = Cell.create(trooper.getX(), trooper.getY());
-            int ap = trooper.getActionPoints();
+            int ap = trooper.getInitialActionPoints();
             int turnIndex = world.getMoveIndex();
-            if (RadioChannel.INSTANCE.getTurnOrder().indexOf(trooper.getType()) < RadioChannel.INSTANCE.getTurnOrder()
-                    .indexOf(self.getType()))
+            if (trooper.getId() == self.getId())
+            {
+                ap = self.getActionPoints();
+            }
+            else if (RadioChannel.INSTANCE.getTurnOrder().indexOf(trooper.getType()) < RadioChannel.INSTANCE
+                    .getTurnOrder().indexOf(self.getType()))
             {
                 turnIndex++;
                 ap = trooper.getInitialActionPoints();
-                if (DistanceCalculator.INSTANCE.isCommanderNearby(Cell.create(trooper.getX(), trooper.getY()), trooper,
-                        turnIndex, world))
-                {
-                    ap += game.getCommanderAuraBonusActionPoints();
-                }
             }
-            List<PathNode> path = DistanceCalculator.INSTANCE.getPath(trooper, ap, turnIndex, trooperCell,
-                    goals.get(trooper), world, game);
+            if (!TrooperType.COMMANDER.equals(trooper.getType())
+                    && trooper.getId() != self.getId()
+                    && DistanceCalculator.INSTANCE.isCommanderNearby(Cell.create(trooper.getX(), trooper.getY()),
+                            trooper, turnIndex, world))
+            {
+                ap += game.getCommanderAuraBonusActionPoints();
+            }
+            List<PathNode> path = DistanceCalculator.INSTANCE.getPath(new DistanceCalcContext(trooper, ap, turnIndex,
+                    trooperCell), goals.get(trooper), world, game);
             RadioChannel.INSTANCE.giveMoveOrder(trooper.getId(), path);
         }
-    }
-
-    @Override
-    public boolean isApplicable(Trooper self, List<Trooper> squad, List<Bonus> visibleBonuses,
-            List<Trooper> visibleEnemies, World world, Game game)
-    {
-        return visibleBonuses.size() == 0 && visibleEnemies.size() == 0 && !RadioChannel.INSTANCE.isSomeoneBeingShot();
     }
 
     private Map<Trooper, Cell> getNextCells(Trooper self, World world)

@@ -13,22 +13,18 @@ import model.Move;
  */
 public class OrderForTurn
 {
-    private final Cell start;
-    private final Cell end;
     private final LinkedList<Move> orders;
     private final int turnIndex;
 
-    public OrderForTurn(Cell start, Cell end, LinkedList<Move> orders, int turnIndex)
+    public OrderForTurn(LinkedList<Move> orders, int turnIndex)
     {
-        this.start = start;
-        this.end = end;
         this.orders = orders;
         this.turnIndex = turnIndex;
     }
 
     public Cell getEnd()
     {
-        return end;
+        return Cell.create(orders.peekLast().getX(), orders.peekLast().getY());
     }
 
     public LinkedList<Move> getOrders()
@@ -38,7 +34,7 @@ public class OrderForTurn
 
     public Cell getStart()
     {
-        return start;
+        return Cell.create(orders.peekFirst().getX(), orders.peekFirst().getY());
     }
 
     public int getTurnIndex()

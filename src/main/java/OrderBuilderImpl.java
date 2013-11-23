@@ -1,9 +1,8 @@
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import model.*;
+import model.Trooper;
+import model.TrooperType;
 
 /**
  * 
@@ -16,7 +15,7 @@ import model.*;
  */
 public abstract class OrderBuilderImpl implements OrderBuilder
 {
-    private static class OrderEdictionSorter implements Comparator<Trooper>
+    protected static class OrderEdictionSorter implements Comparator<Trooper>
     {
         private final int selfTurnOrderIndex;
 
@@ -30,6 +29,10 @@ public abstract class OrderBuilderImpl implements OrderBuilder
         public int compare(Trooper o1, Trooper o2)
         {
             if (TrooperType.COMMANDER.equals(o1.getType()))
+            {
+                return -1;
+            }
+            if (TrooperType.COMMANDER.equals(o2.getType()))
             {
                 return 1;
             }
@@ -58,23 +61,9 @@ public abstract class OrderBuilderImpl implements OrderBuilder
     }
 
     @Override
-    public void buildOrder(Trooper self, List<Trooper> squad, List<Bonus> visibleBonuses, List<Trooper> visibleEnemies,
-            World world, Game game)
-    {
-        List<Trooper> troopers = new ArrayList<Trooper>(squad);
-        Collections.sort(troopers, new OrderEdictionSorter(self.getType()));
-        for (Trooper trooper : troopers)
-        {
-            buildOrderForTrooper(trooper, squad, visibleBonuses, visibleEnemies, world, game);
-        }
-    }
-
-    @Override
     public OrderType getType()
     {
         return type;
     }
 
-    protected abstract void buildOrderForTrooper(Trooper trooper, List<Trooper> squad, List<Bonus> visibleBonuses,
-            List<Trooper> visibleEnemies, World world, Game game);
 }

@@ -22,15 +22,8 @@ public class OrderBuilderAttack extends OrderBuilderImpl
     }
 
     @Override
-    public void buildOrder(List<Trooper> squad, List<Bonus> visibleBonuses, List<Trooper> visibleEnemies, World world,
-            Game game)
-    {
-    }
-
-    @Override
-    public boolean isApplicable(List<Trooper> squad, List<Bonus> visibleBonuses, List<Trooper> visibleEnemies,
+    public void buildOrder(Trooper self, List<Trooper> squad, List<Bonus> visibleBonuses, List<Trooper> visibleEnemies,
             World world, Game game)
     {
-        return !visibleEnemies.isEmpty();
     }
 }

@@ -39,11 +39,11 @@ public class Helper
         return Cell.create(x / group.size(), y / group.size());
     }
 
-    public double distance(Cell cell1, Cell cell2)
+    public int distance(Cell cell1, Cell cell2)
     {
-        double dx = cell1.getX() - cell2.getX();
-        double dy = cell1.getY() - cell2.getY();
-        return Math.sqrt(dx * dx + dy * dy);
+        int dx = Math.abs(cell1.getX() - cell2.getX());
+        int dy = Math.abs(cell1.getY() - cell2.getY());
+        return dx + dy;
     }
 
     public double distance(int x1, int y1, int x2, int y2)

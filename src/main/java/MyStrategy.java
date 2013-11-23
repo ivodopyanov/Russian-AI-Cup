@@ -5,7 +5,14 @@ import model.*;
 
 public final class MyStrategy implements Strategy
 {
-    private static final List<OrderBuilder> ORDER_BUILDERS = Arrays.asList();
+
+    private static final Map<OrderType, OrderBuilder> ORDER_BUILDERS = new HashMap<OrderType, OrderBuilder>();
+    static
+    {
+        ORDER_BUILDERS.put(OrderType.ATTACK, new OrderBuilderAttack());
+        ORDER_BUILDERS.put(OrderType.PATROL, new OrderBuilderPatrolArea());
+        ORDER_BUILDERS.put(OrderType.PICKUP_BONUSES, new OrderBuilderPickupBonuses());
+    }
 
     @Override
     public void move(Trooper self, World world, Game game, Move move)
@@ -24,22 +31,24 @@ public final class MyStrategy implements Strategy
         scanSurroundingsForEnemies(self, world);
         scanSurroundingsForBonuses(world);
         updatePatrolPoints(self, world);
-        if (world.getMoveIndex() == 1)
+        if (world.getMoveIndex() == 0)
         {
             //Первый ход всегда пропускаем, чтобы определить очередность движения солдат
             RadioChannel.INSTANCE.getTurnOrder().add(self.getType());
             return;
         }
-        if (RadioChannel.INSTANCE.doesRequireNewOrders())
+        if (RadioChannel.INSTANCE.doesRequireNewOrders()
+                || RadioChannel.INSTANCE.getOrders().get(self.getId())[world.getMoveIndex()] == null)
         {
             rethinkOrders(self, world, game);
         }
-        OrderForTurn currentOrderForTurn = RadioChannel.INSTANCE.getOrders().get(self.getId()).peek();
-        Move nextMove = currentOrderForTurn.getOrders().poll();
+        OrderForTurn currentOrderForTurn = RadioChannel.INSTANCE.getOrders().get(self.getId())[world.getMoveIndex()];
         if (currentOrderForTurn.getOrders().isEmpty())
         {
-            RadioChannel.INSTANCE.getOrders().get(self.getId()).poll();
+            move.setAction(ActionType.END_TURN);
+            return;
         }
+        Move nextMove = currentOrderForTurn.getOrders().poll();
         move.setAction(nextMove.getAction());
         move.setDirection(nextMove.getDirection());
         move.setX(nextMove.getX());
@@ -75,14 +84,9 @@ public final class MyStrategy implements Strategy
         List<Trooper> squad = Helper.INSTANCE.findSquad(world);
         List<Bonus> visibleBonuses = Arrays.asList(world.getBonuses());
         List<Trooper> visibleEnemies = Helper.INSTANCE.findEnemies(world);
-        for (OrderBuilder orderBuilder : ORDER_BUILDERS)
-        {
-            if (orderBuilder.isApplicable(squad, visibleBonuses, visibleEnemies, world, game))
-            {
-                orderBuilder.buildOrder(squad, visibleBonuses, visibleEnemies, world, game);
-                break;
-            }
-        }
+        OrderType orderType = OrderSelector.INSTANCE.selectOrder(self, squad, visibleBonuses, visibleEnemies, world,
+                game);
+        ORDER_BUILDERS.get(orderType).buildOrder(self, squad, visibleBonuses, visibleEnemies, world, game);
         RadioChannel.INSTANCE.ordersGiven();
     }
 

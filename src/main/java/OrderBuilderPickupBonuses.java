@@ -66,32 +66,75 @@ public class OrderBuilderPickupBonuses extends OrderBuilderImpl
     public void buildOrder(Trooper self, List<Trooper> squad, List<Bonus> visibleBonuses, List<Trooper> visibleEnemies,
             World world, Game game)
     {
-        Map<Trooper, List<BonusTrooperInfo>> availableBonuses = calcAvailableBonuses(squad, visibleBonuses, world);
+        List<Trooper> troopers = new ArrayList<Trooper>(squad);
+        Collections.sort(troopers, new OrderEdictionSorter(self.getType()));
+        Map<Trooper, List<BonusTrooperInfo>> availableBonuses = calcAvailableBonuses(troopers, visibleBonuses, world);
         Map<Trooper, List<Bonus>> distributedBonuses = distributeBonuses(availableBonuses);
-        buildOrders(distributedBonuses, world);
+        Map<Trooper, PathNode> endingPathNodes = buildBonusCollectionOrders(self, troopers, distributedBonuses, world,
+                game);
+        buildConvergenceOrders(endingPathNodes, troopers, self, world, game);
+
     }
 
-    @Override
-    public boolean isApplicable(Trooper self, List<Trooper> squad, List<Bonus> visibleBonuses,
-            List<Trooper> visibleEnemies, World world, Game game)
+    private Map<Trooper, PathNode> buildBonusCollectionOrders(Trooper self, List<Trooper> troopers,
+            Map<Trooper, List<Bonus>> bonuses, World world, Game game)
     {
-        return seePickableBonuses(squad, visibleBonuses) && visibleEnemies.isEmpty()
-                && !RadioChannel.INSTANCE.isSomeoneBeingShot();
-    }
-
-    private void buildOrders(Map<Trooper, List<Bonus>> bonuses, World world)
-    {
-        for (Entry<Trooper, List<Bonus>> entry : bonuses.entrySet())
+        Map<Trooper, PathNode> endingPathNodes = new HashMap<Trooper, PathNode>();
+        for (Trooper trooper : troopers)
         {
-            Cell start = Cell.create(entry.getKey().getX(), entry.getKey().getY());
-            Cell end = null;
-            for (Bonus bonus : entry.getValue())
+            int turnIndex = world.getMoveIndex();
+            int ap = trooper.getInitialActionPoints();
+            if (self.getId() == trooper.getId())
             {
-                end = Cell.create(bonus.getX(), bonus.getY());
-                List<Cell> path = DistanceCalculator.INSTANCE.getPath(start, end, world, false);
-                RadioChannel.INSTANCE.giveMoveOrder(entry.getKey().getId(), path);
+                ap = self.getActionPoints();
             }
+            else if (RadioChannel.INSTANCE.getTurnOrder().indexOf(trooper.getType()) < RadioChannel.INSTANCE
+                    .getTurnOrder().indexOf(self.getType()))
+            {
+                turnIndex++;
+                ap = trooper.getInitialActionPoints();
+            }
+            if (!TrooperType.COMMANDER.equals(trooper.getType())
+                    && trooper.getId() != self.getId()
+                    && DistanceCalculator.INSTANCE.isCommanderNearby(Cell.create(trooper.getX(), trooper.getY()),
+                            trooper, turnIndex, world))
+            {
+                ap += game.getCommanderAuraBonusActionPoints();
+            }
+            PathNode lastPathNode = new PathNode(Cell.create(trooper.getX(), trooper.getY()), turnIndex, null, ap, 0,
+                    trooper);
+            for (Bonus bonus : bonuses.get(trooper))
+            {
+                Cell end = Cell.create(bonus.getX(), bonus.getY());
+                LinkedList<PathNode> path = DistanceCalculator.INSTANCE.getPath(new DistanceCalcContext(trooper,
+                        lastPathNode.getCurrentAP(), lastPathNode.getTurnIndex(), lastPathNode.getCell()), end, world,
+                        game);
+                RadioChannel.INSTANCE.giveMoveOrder(trooper.getId(), path);
+                lastPathNode = path.peekLast();
+
+            }
+            endingPathNodes.put(trooper, lastPathNode);
         }
+        return endingPathNodes;
+    }
+
+    private void buildConvergenceOrders(Map<Trooper, PathNode> startPathNodes, List<Trooper> squad, Trooper self,
+            World world, Game game)
+    {
+        List<DistanceCalcContext> contexts = new ArrayList<DistanceCalcContext>();
+        for (Trooper trooper : squad)
+        {
+            PathNode startPathNode = startPathNodes.get(trooper);
+            contexts.add(new DistanceCalcContext(trooper, startPathNode.getCurrentAP(), startPathNode.getTurnIndex(),
+                    startPathNode.getCell()));
+        }
+        Map<Trooper, List<PathNode>> convergencePaths = DistanceConvergenceCalculator.INSTANCE.getConvergencePaths(
+                self, contexts, world, game);
+        for (Entry<Trooper, List<PathNode>> entry : convergencePaths.entrySet())
+        {
+            RadioChannel.INSTANCE.giveMoveOrder(entry.getKey().getId(), entry.getValue());
+        }
+
     }
 
     private Map<Trooper, List<BonusTrooperInfo>> calcAvailableBonuses(List<Trooper> squad, List<Bonus> visibleBonuses,
@@ -108,7 +151,7 @@ public class OrderBuilderPickupBonuses extends OrderBuilderImpl
                         || (BonusType.GRENADE.equals(visibleBonus.getType()) && !teammate.isHoldingGrenade())
                         || (BonusType.MEDIKIT.equals(visibleBonus.getType()) && !teammate.isHoldingMedikit()))
                 {
-                    pickableBonuses.add(new BonusTrooperInfo(visibleBonus, (int)Helper.INSTANCE.distance(trooperCell,
+                    pickableBonuses.add(new BonusTrooperInfo(visibleBonus, Helper.INSTANCE.distance(trooperCell,
                             Cell.create(visibleBonus.getX(), visibleBonus.getY()))));
                 }
             }
@@ -156,22 +199,5 @@ public class OrderBuilderPickupBonuses extends OrderBuilderImpl
             }
         }
         return result;
-    }
-
-    private boolean seePickableBonuses(List<Trooper> squad, List<Bonus> visibleBonuses)
-    {
-        for (Trooper teammate : squad)
-        {
-            for (Bonus visibleBonus : visibleBonuses)
-            {
-                if ((BonusType.FIELD_RATION.equals(visibleBonus.getType()) && !teammate.isHoldingFieldRation())
-                        || (BonusType.GRENADE.equals(visibleBonus.getType()) && !teammate.isHoldingGrenade())
-                        || (BonusType.MEDIKIT.equals(visibleBonus.getType()) && !teammate.isHoldingMedikit()))
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 }
