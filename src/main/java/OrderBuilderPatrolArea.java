@@ -41,26 +41,32 @@ public class OrderBuilderPatrolArea extends OrderBuilderImpl
                 return index1 - index2;
             }
             Cell trooperCell = Cell.create(trooper.getX(), trooper.getY());
-            int distance1 = (int)Helper.INSTANCE.distance(trooperCell, o1);
-            int distance2 = (int)Helper.INSTANCE.distance(trooperCell, o2);
+            int distance1 = Helper.INSTANCE.distance(trooperCell, o1);
+            int distance2 = Helper.INSTANCE.distance(trooperCell, o2);
             return distance2 - distance1;
         }
 
-    }
-
-    public OrderBuilderPatrolArea()
-    {
-        super(OrderType.PATROL);
     }
 
     @Override
     public void buildOrder(Trooper self, List<Trooper> squad, List<Bonus> visibleBonuses, List<Trooper> visibleEnemies,
             World world, Game game)
     {
-        Map<Trooper, Cell> goals = getNextCells(self, world);
-        List<Trooper> troopers = new ArrayList<Trooper>(squad);
-        Collections.sort(troopers, new OrderEdictionSorter(self.getType()));
-        for (Trooper trooper : troopers)
+        Map<Trooper, Cell> goals = getNextCells(self, squad, world);
+        Map<Trooper, DistanceCalcContext> contexts = getDistanceCalcContexts(squad, self, world, game);
+        for (Trooper trooper : squad)
+        {
+            List<PathNode> path = DistanceCalculator.INSTANCE.getPath(contexts.get(trooper), goals.get(trooper), world,
+                    game);
+            RadioChannel.INSTANCE.giveMoveOrder(trooper.getId(), path);
+        }
+    }
+
+    protected Map<Trooper, DistanceCalcContext> getDistanceCalcContexts(List<Trooper> squad, Trooper self, World world,
+            Game game)
+    {
+        Map<Trooper, DistanceCalcContext> result = new HashMap<Trooper, DistanceCalcContext>();
+        for (Trooper trooper : squad)
         {
             Cell trooperCell = Cell.create(trooper.getX(), trooper.getY());
             int ap = trooper.getInitialActionPoints();
@@ -82,13 +88,13 @@ public class OrderBuilderPatrolArea extends OrderBuilderImpl
             {
                 ap += game.getCommanderAuraBonusActionPoints();
             }
-            List<PathNode> path = DistanceCalculator.INSTANCE.getPath(new DistanceCalcContext(trooper, ap, turnIndex,
-                    trooperCell), goals.get(trooper), world, game);
-            RadioChannel.INSTANCE.giveMoveOrder(trooper.getId(), path);
+            result.put(trooper, new DistanceCalcContext(trooper, ap, turnIndex, trooperCell));
         }
+
+        return result;
     }
 
-    private Map<Trooper, Cell> getNextCells(Trooper self, World world)
+    protected Map<Trooper, Cell> getNextCells(Trooper self, List<Trooper> squad, World world)
     {
         Map<Trooper, Cell> result = new HashMap<Trooper, Cell>();
         List<TrooperType> turnOrder = RadioChannel.INSTANCE.getTurnOrder();

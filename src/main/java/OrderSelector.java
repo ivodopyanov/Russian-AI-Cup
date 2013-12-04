@@ -27,6 +27,10 @@ public class OrderSelector
         {
             return OrderType.PICKUP_BONUSES;
         }
+        if (squadIsTooFarFromEachOther(squad))
+        {
+            return OrderType.GROUP;
+        }
         return OrderType.PATROL;
     }
 
@@ -45,5 +49,18 @@ public class OrderSelector
             }
         }
         return false;
+    }
+
+    private boolean squadIsTooFarFromEachOther(List<Trooper> squad)
+    {
+        int perimeter = 0;
+        for (int i = 1; i < squad.size(); i++)
+        {
+            Trooper trooper1 = squad.get(i - 1);
+            Trooper trooper2 = squad.get(i);
+            perimeter += Helper.INSTANCE.distance(Cell.create(trooper1.getX(), trooper1.getY()),
+                    Cell.create(trooper2.getX(), trooper2.getY()));
+        }
+        return perimeter <= 30;
     }
 }

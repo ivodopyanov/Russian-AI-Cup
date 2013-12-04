@@ -120,7 +120,21 @@ public class Helper
         return Cell.create(x, y);
     }
 
-    public List<Trooper> findSquad(World world)
+    public List<Trooper> findSquad(Trooper self, World world)
+    {
+        List<Trooper> result = findSquadWithoutOrdering(world);
+        Collections.sort(result, new OrderEdictionSorter(self.getType()));
+        return result;
+    }
+
+    public Trooper findSquadLeader(World world)
+    {
+        List<Trooper> squad = findSquadWithoutOrdering(world);
+        Collections.sort(squad, LEADER_QUALITIES_COMPARATOR);
+        return squad.get(0);
+    }
+
+    public List<Trooper> findSquadWithoutOrdering(World world)
     {
         List<Trooper> result = new ArrayList<Trooper>();
         for (Trooper trooper : world.getTroopers())
@@ -133,16 +147,9 @@ public class Helper
         return result;
     }
 
-    public Trooper findSquadLeader(World world)
-    {
-        List<Trooper> squad = findSquad(world);
-        Collections.sort(squad, LEADER_QUALITIES_COMPARATOR);
-        return squad.get(0);
-    }
-
     public Trooper findTeammateTrooperByType(World world, TrooperType type)
     {
-        for (Trooper trooper : findSquad(world))
+        for (Trooper trooper : findSquadWithoutOrdering(world))
         {
             if (trooper.getType().equals(type))
             {
@@ -251,7 +258,7 @@ public class Helper
 
     public boolean isVisibleForSquad(Cell cell, World world, TrooperStance cellStance)
     {
-        for (Trooper teammate : findSquad(world))
+        for (Trooper teammate : findSquadWithoutOrdering(world))
         {
             if (world.isVisible(teammate.getVisionRange(), teammate.getX(), teammate.getY(), teammate.getStance(),
                     cell.getX(), cell.getY(), cellStance))

@@ -9,7 +9,7 @@
  */
 public enum OrderType
 {
-    PATROL(10), PICKUP_BONUSES(20), ATTACK(30);
+    PATROL(10), PICKUP_BONUSES(20), ATTACK(30), GROUP(0);
 
     private final int importance;
 

@@ -16,11 +16,6 @@ import model.World;
  */
 public class OrderBuilderAttack extends OrderBuilderImpl
 {
-    public OrderBuilderAttack()
-    {
-        super(OrderType.ATTACK);
-    }
-
     @Override
     public void buildOrder(Trooper self, List<Trooper> squad, List<Bonus> visibleBonuses, List<Trooper> visibleEnemies,
             World world, Game game)

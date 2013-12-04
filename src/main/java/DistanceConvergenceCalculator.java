@@ -37,15 +37,15 @@ public class DistanceConvergenceCalculator
                 return o1.getTurnIndex() - o2.getTurnIndex();
             }
             //Если PathNode принадлежат разным солдатам, то обрабатываем того солдата, который будет ходить раньше
-            if (o1.getTrooper().getId() != o2.getTrooper().getId())
+            /*if (o1.getTrooper().getId() != o2.getTrooper().getId())
             {
                 return compareRelativeTurnOrder(o1.getTrooper().getType(), o2.getTrooper().getType());
-            }
+            }*/
             double d1 = calcApproxDistanceToConvergencePoint(o1, currentBestPathNodes);
             double d2 = calcApproxDistanceToConvergencePoint(o2, currentBestPathNodes);
             if (d1 != d2)
             {
-                return d1 > d2 ? -1 : 1;
+                return d1 > d2 ? 1 : -1;
             }
             return o1.getSpentAP() - o2.getSpentAP();
         }
@@ -78,7 +78,7 @@ public class DistanceConvergenceCalculator
     private static double calcApproxDistanceToConvergencePoint(PathNode pathNode,
             Map<Trooper, PathNode> currentBestPathNodes)
     {
-        double perimeter = 0;
+        int perimeter = 0;
         Cell start = pathNode.getCell();
         Cell end = null;
         for (Entry<Trooper, PathNode> currentBestPathNode : currentBestPathNodes.entrySet())
@@ -93,7 +93,7 @@ public class DistanceConvergenceCalculator
         }
         end = pathNode.getCell();
         perimeter += Helper.INSTANCE.distance(start, end);
-        return (int)perimeter;
+        return perimeter;
     }
 
     //Поиск кратчайшего пути для всех солдат, который приведет их всех в одно место. 

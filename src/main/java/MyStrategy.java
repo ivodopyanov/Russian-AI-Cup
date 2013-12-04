@@ -12,6 +12,7 @@ public final class MyStrategy implements Strategy
         ORDER_BUILDERS.put(OrderType.ATTACK, new OrderBuilderAttack());
         ORDER_BUILDERS.put(OrderType.PATROL, new OrderBuilderPatrolArea());
         ORDER_BUILDERS.put(OrderType.PICKUP_BONUSES, new OrderBuilderPickupBonuses());
+        ORDER_BUILDERS.put(OrderType.GROUP, new OrderBuilderGroup());
     }
 
     @Override
@@ -43,7 +44,7 @@ public final class MyStrategy implements Strategy
             rethinkOrders(self, world, game);
         }
         OrderForTurn currentOrderForTurn = RadioChannel.INSTANCE.getOrders().get(self.getId())[world.getMoveIndex()];
-        if (currentOrderForTurn.getOrders().isEmpty())
+        if (currentOrderForTurn == null || currentOrderForTurn.getOrders().isEmpty())
         {
             move.setAction(ActionType.END_TURN);
             return;
@@ -80,8 +81,8 @@ public final class MyStrategy implements Strategy
 
     private void rethinkOrders(Trooper self, World world, Game game)
     {
-        RadioChannel.INSTANCE.resetOrders();
-        List<Trooper> squad = Helper.INSTANCE.findSquad(world);
+        List<Trooper> squad = Helper.INSTANCE.findSquad(self, world);
+        RadioChannel.INSTANCE.resetOrders(self, world, squad);
         List<Bonus> visibleBonuses = Arrays.asList(world.getBonuses());
         List<Trooper> visibleEnemies = Helper.INSTANCE.findEnemies(world);
         OrderType orderType = OrderSelector.INSTANCE.selectOrder(self, squad, visibleBonuses, visibleEnemies, world,

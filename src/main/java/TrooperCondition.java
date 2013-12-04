@@ -16,6 +16,11 @@ public class TrooperCondition
     private boolean isBeingShot = false;
     private int turn;
 
+    public TrooperCondition(Trooper trooper)
+    {
+        this.trooper = trooper;
+    }
+
     public Trooper getTrooper()
     {
         return trooper;

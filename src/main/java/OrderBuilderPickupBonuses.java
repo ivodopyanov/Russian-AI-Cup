@@ -57,23 +57,13 @@ public class OrderBuilderPickupBonuses extends OrderBuilderImpl
         }
     };
 
-    public OrderBuilderPickupBonuses()
-    {
-        super(OrderType.PICKUP_BONUSES);
-    }
-
     @Override
     public void buildOrder(Trooper self, List<Trooper> squad, List<Bonus> visibleBonuses, List<Trooper> visibleEnemies,
             World world, Game game)
     {
-        List<Trooper> troopers = new ArrayList<Trooper>(squad);
-        Collections.sort(troopers, new OrderEdictionSorter(self.getType()));
-        Map<Trooper, List<BonusTrooperInfo>> availableBonuses = calcAvailableBonuses(troopers, visibleBonuses, world);
+        Map<Trooper, List<BonusTrooperInfo>> availableBonuses = calcAvailableBonuses(squad, visibleBonuses, world);
         Map<Trooper, List<Bonus>> distributedBonuses = distributeBonuses(availableBonuses);
-        Map<Trooper, PathNode> endingPathNodes = buildBonusCollectionOrders(self, troopers, distributedBonuses, world,
-                game);
-        buildConvergenceOrders(endingPathNodes, troopers, self, world, game);
-
+        buildBonusCollectionOrders(self, squad, distributedBonuses, world, game);
     }
 
     private Map<Trooper, PathNode> buildBonusCollectionOrders(Trooper self, List<Trooper> troopers,
@@ -118,25 +108,6 @@ public class OrderBuilderPickupBonuses extends OrderBuilderImpl
         return endingPathNodes;
     }
 
-    private void buildConvergenceOrders(Map<Trooper, PathNode> startPathNodes, List<Trooper> squad, Trooper self,
-            World world, Game game)
-    {
-        List<DistanceCalcContext> contexts = new ArrayList<DistanceCalcContext>();
-        for (Trooper trooper : squad)
-        {
-            PathNode startPathNode = startPathNodes.get(trooper);
-            contexts.add(new DistanceCalcContext(trooper, startPathNode.getCurrentAP(), startPathNode.getTurnIndex(),
-                    startPathNode.getCell()));
-        }
-        Map<Trooper, List<PathNode>> convergencePaths = DistanceConvergenceCalculator.INSTANCE.getConvergencePaths(
-                self, contexts, world, game);
-        for (Entry<Trooper, List<PathNode>> entry : convergencePaths.entrySet())
-        {
-            RadioChannel.INSTANCE.giveMoveOrder(entry.getKey().getId(), entry.getValue());
-        }
-
-    }
-
     private Map<Trooper, List<BonusTrooperInfo>> calcAvailableBonuses(List<Trooper> squad, List<Bonus> visibleBonuses,
             World world)
     {
@@ -161,23 +132,33 @@ public class OrderBuilderPickupBonuses extends OrderBuilderImpl
         return result;
     }
 
-    private Map<Trooper, List<Bonus>> distributeBonuses(Map<Trooper, List<BonusTrooperInfo>> avaiableBonuses)
+    private Map<Trooper, List<Bonus>> distributeBonuses(Map<Trooper, List<BonusTrooperInfo>> availableBonuses)
     {
         Map<Trooper, List<Bonus>> result = new HashMap<Trooper, List<Bonus>>();
-        for (Trooper trooper : avaiableBonuses.keySet())
+        for (Trooper trooper : availableBonuses.keySet())
         {
             result.put(trooper, new ArrayList<Bonus>());
         }
-        Trooper luckyTrooper = findTrooperWithClosestBonus(avaiableBonuses);
+        Set<BonusTrooperInfo> sameTypeBonuses = new HashSet<BonusTrooperInfo>();
+        Trooper luckyTrooper = findTrooperWithClosestBonus(availableBonuses);
         while (luckyTrooper != null)
         {
-            BonusTrooperInfo bonus = avaiableBonuses.get(luckyTrooper).get(0);
-            result.get(luckyTrooper).add(bonus.getBonus());
-            for (Trooper trooper : avaiableBonuses.keySet())
+            BonusTrooperInfo closestBonus = availableBonuses.get(luckyTrooper).get(0);
+            result.get(luckyTrooper).add(closestBonus.getBonus());
+            for (Trooper trooper : availableBonuses.keySet())
             {
-                avaiableBonuses.get(trooper).remove(bonus);
+                availableBonuses.get(trooper).remove(closestBonus);
             }
-            luckyTrooper = findTrooperWithClosestBonus(avaiableBonuses);
+            sameTypeBonuses.clear();
+            for (BonusTrooperInfo bonus : availableBonuses.get(luckyTrooper))
+            {
+                if (bonus.getBonus().getType().equals(closestBonus.getBonus().getType()))
+                {
+                    sameTypeBonuses.add(bonus);
+                }
+            }
+            availableBonuses.get(luckyTrooper).removeAll(sameTypeBonuses);
+            luckyTrooper = findTrooperWithClosestBonus(availableBonuses);
         }
         return result;
     }

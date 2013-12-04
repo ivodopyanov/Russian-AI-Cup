@@ -57,4 +57,11 @@ public class PathNode
     {
         return turnIndex;
     }
+
+    @Override
+    public String toString()
+    {
+        return String.format("Trooper = %s, turn = %d, cell = %s, currentAP = %d, spentAP = %d", trooper.getType()
+                .toString(), turnIndex, cell.toString(), currentAP, spentAP);
+    }
 }
